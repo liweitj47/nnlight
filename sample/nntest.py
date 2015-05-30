@@ -68,6 +68,6 @@ data_dict = {
     "mask" : numpy.load(open("sentiment/data/train_mask.npy","rb"))
 }
 print [(n, v.shape) for n,v in data_dict.items()]
-network = nn_base.create(nn_module, data_dict)
+network = nnlight.create(nn_module, data_dict)
 a, b = network.train(0,100)
 print b

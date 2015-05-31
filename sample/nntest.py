@@ -63,9 +63,9 @@ nn_module = {
 }
 
 data_dict = {
-    "label" : numpy.load(open("sentiment/data/train_labels.npy","rb")),
-    "words" : numpy.load(open("sentiment/data/train_words.npy","rb")),
-    "mask" : numpy.load(open("sentiment/data/train_mask.npy","rb"))
+    "label" : numpy.load(open("data/train_labels.npy","rb")),
+    "words" : numpy.load(open("data/train_words.npy","rb")),
+    "mask" : numpy.load(open("data/train_mask.npy","rb"))
 }
 print [(n, v.shape) for n,v in data_dict.items()]
 network = nnlight.create(nn_module, data_dict)

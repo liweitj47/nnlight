@@ -596,6 +596,7 @@ class SGDUpdate(Update):
 
         if not isinstance(loss, NNValue):
             NNValue.raise_("invalid loss type for SGDUpdata: %s" % loss)
+        
         if params is None:
             params = {}
 

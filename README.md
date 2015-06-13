@@ -1,2 +1,2 @@
 # nnlight
-a light but powerful deep NN framework in one source file
+a light deep NN framework in one source file

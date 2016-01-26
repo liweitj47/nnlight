@@ -1,0 +1,111 @@
+import random
+
+import numpy
+import theano
+
+from layers import Layer, LayerWithData
+from theano import tensor
+from utils.constructor import Constructor
+
+
+class WeightLayer(LayerWithData):
+
+    def __init__(self, name, shape, dtype, init_method):
+        Layer.__init__(self)
+        self.name = name
+        self.data = None
+        self.init_method = init_method
+        constructor = Constructor.get_default_array_constructor(dtype)
+        if not constructor:
+            self.error("invalid datatype '%s' for weight layer '%s'" % (dtype, name))
+        self.output = constructor(shape, self)
+
+    def get_inputs(self):
+        return []
+
+    def get_output(self, name=None):
+        if name is not None:
+            return None
+        else:
+            return self.output
+
+    def get_outputs(self):
+        return [self.get_output()]
+
+    def get_shape(self):
+        return self.get_output().get_shape()
+
+    def get_data(self):
+        return self.data
+
+    def set_data(self, data):
+        self.data = data
+
+    def forward_shape(self, override=False):
+        shape0 = self.data.shape
+        shape1 = self.get_output().get_shape()
+        if len(shape0) != len(shape1):
+            self.error("inconsistent weight dimension for '%s', %d expected "
+                       "but actually %d" % (self.name, len(shape1), len(shape0)))
+        for i in range(len(shape0)):
+            if shape0[i] == shape1[i]:
+                continue
+            elif shape1[i] <= 0 or override:
+                shape1[i] = shape0[i]
+            else:
+                expected = [d if d > 0 else 'x' for d in shape1]
+                self.error("inconsistent weight shape for '%s', %s expected "
+                           "but actually %s" % (self.name, expected, shape0))
+        self.get_output().set_shape(shape1)
+
+    def backward_shape(self, override=False):
+        shape0 = self.data.shape
+        shape1 = self.get_output().get_shape()
+        if len(shape0) != len(shape1):
+            self.error("inconsistent weight dimension for '%s', %d expected "
+                       "but actually %d" % (self.name, len(shape1), len(shape0)))
+        for i in range(len(shape0)):
+            if shape0[i] != shape1[i] and shape1[i] > 0:
+                expected = [d if d > 0 else 'x' for d in shape1]
+                self.error("inconsistent weight shape for '%s', %s expected "
+                           "but actually %s" % (self.name, expected, shape0))
+
+    #  theano functions
+    def get_theano_output(self, diagram):
+        dims = len(self.get_shape())
+        if dims == 1:
+            return theano.tensor.vector()
+        elif dims == 2:
+            return theano.tensor.matrix()
+        elif dims == 3:
+            return theano.tensor.tensor3()
+        elif dims == 4:
+            return theano.tensor.tensor4()
+        else:
+            self.error("dimension %d not supported for weight '%s'" % (dims, self.name))
+
+    def get_theano_shared(self, maximum_sample_size):
+        if not self.data:
+            self.data = numpy.zeros(self.get_shape(), dtype="float32")
+            if self.init_method:
+                high = 4.0 * numpy.sqrt(6.0 / sum(self.get_shape()))
+                low = -high
+
+                def __randomize__(w, dims):
+                    if len(dims) == 1:
+                        for i in range(dims[0]):
+                            w[i] = random.uniform(low, high)
+                    else:
+                        for i in range(dims[0]):
+                            __randomize__(w[i], dims[1:])
+                __randomize__(self.data, self.get_shape())
+
+        if not hasattr(self, "theano_shared_data"):
+            shared = theano.shared(self.data, borrow=True)
+            setattr(self, "theano_shared_data", shared)
+        else:
+            getattr(self, "theano_shared_data").set_value(self.data)
+        return getattr(self, "theano_shared_data")
+
+    def set_theano_shared(self, data):
+        self.error("WeightLayer does not support set_theano_shared()")

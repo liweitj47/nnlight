@@ -2,513 +2,545 @@
 """
 
 """
+import math
 import random
 import string
-import theano
+
 import numpy
-import math
+import theano
+
+from utils.debug import NNDebug
 
 
-class NNDebug:
-    """
-    debug utility class
-    """
+class Network:
+
+    def __init__(self, core):
+        self.core = core
+
+    @staticmethod
+    def error(s):
+        NNDebug.error("[network] " + str(s))
+
+    @staticmethod
+    def check(cond, s):
+        NNDebug.check(cond, "[network] " + str(s))
+
+
+class TheanoNetwork(Network):
+
+    def __init__(self, core, base_train_func, base_test_func, maximum_sample_size):
+        Network.__init__(self, core)
+        self.inputs = self.core.inputs.values()
+        self.total_sample_size = self.inputs[0].get_data().shape[0]
+        self.maximum_sample_size =\
+            maximum_sample_size \
+            if 0 < maximum_sample_size < self.total_sample_size \
+            else self.total_sample_size
+
+    @staticmethod
+    def __default_batch_collector(accu, v):
+        if isinstance(accu, numpy.ndarray):
+            if accu.shape == ():
+                return numpy.array(accu + v)
+            else:
+                return numpy.concatenate([accu, v])
+        else:
+            return None
+
+    def train(self, iters=None, batch_size=None, iter_reporter=None, batch_collector=None):
+        if iters is None:
+            iters = 1
+        if batch_size is None:
+            batch_size = self.maximum_sample_size
+        if batch_collector is None:
+            batch_collector = self.__default_batch_collector
+
+        block_num = int(math.ceil(self.total_sample_size / self.maximum_sample_size))
+
+        for it in range(iters):
+            for b in range(block_num):
+                block_beg = b * self.maximum_sample_size
+                block_end = block_beg + self.maximum_sample_size
+                for inp in self.inputs:
+                    block = inp.get_data()[block_beg, block_end]
+                    inp.set_theano_shared(block)
+
+                for batch in range(batch_num):
+
+
+
+
+
+
+
+class NNBuilder:
+
     def __init__(self):
-        pass
+        self.constructor_map = self.__get_default_constructor_map()
 
     @staticmethod
-    def error_(msg):
-        raise Exception(msg)
+    def __get_default_constructor_map():
+        cm = {
+            # value
+            NNScalarInt64: ["int64", "int"],
+            NNScalarFloat32: ["float32", "float"],
+            NNArrayFloat32: ["[float32]", "[float]"],
+            NNArrayInt64: ["[int64]", "[int]"],
+
+            # layer
+            SimpleLayer: ["simple"],
+            SentenceConvLayer: ["sentence_convolution"],
+            MaxPoolingLayer: ["max_pooling"],
+            SoftmaxLayer: ["softmax"],
+            LogisticLayer: ["logistic"],
+            LowRankTensorLayer: ["low_rank_tensor"],
+            LstmLayer: ["lstm"],
+            SequencialSoftmaxLayer: ["sequencial_softmax"],
+
+            # loss
+            MaxMarginLoss: ["max_margin_loss"],
+            BinaryCrossEntropyLoss: ["binary_cross_entropy"],
+            CrossEntropyLoss: ["cross_entropy"],
+
+            # parameter updater
+            SGDUpdate: ["sgd"]
+        }
+        constructor_map = {}
+        for constructor, datatypes in cm.items():
+            for datatype in datatypes:
+                constructor_map[datatype] = constructor
+        return constructor_map
+
+    def register_constructor(self, cls, names):
+        for name in names:
+            self.constructor_map.setdefault(name, cls)
 
     @staticmethod
-    def warning_(text):
-        print text
+    def error(s):
+        NNDebug.error("[builder] " + str(s))
 
     @staticmethod
-    def assert_(cond, msg):
-        if not cond:
-            raise Exception(msg)
+    def check(cond, s):
+        NNDebug.check(cond, "[builder] " + str(s))
 
+    def build(self, src, data_dict=None):
+        """
+        build the network object from configuration source and
+        assign data to the network
 
-global_config = {}
+        :param src:
+            if str, the configuration file path
+            if dict, configuration python dictionary
 
+        :param data_dict:
+            dict, the key is the network input name defined by
+                the configuration, and the value is the
+                numpy.ndarray fed to the network's input
 
-def register_type(names, cls):
-    for name in names:
-        global_config["constructor_map"].setdefault(name, cls)
-
-
-
-def get_default_config():
-
-    # NNValue constructor mapping
-    cm = {
-        NNScalarInt64: ["int64", "int"],
-        NNScalarFloat32: ["float32", "float"],
-        NNArrayFloat32: ["[float32]", "[float]"],
-        NNArrayInt64: ["[int64]", "[int]"],
-
-        SimpleLayer: ["simple"],
-        SentenceConvLayer: ["sentence_convolution"],
-        MaxPoolingLayer: ["max_pooling"],
-        SoftmaxLayer: ["softmax"],
-        LogisticLayer: ["logistic"],
-        LowRankTensorLayer: ["low_rank_tensor"],
-        LstmLayer: ["lstm"],
-        SequencialSoftmaxLayer: ["sequencial_softmax"],
-
-
-        MaxMarginLoss: ["max_margin_loss"],
-        BinaryCrossEntropyLoss: ["binary_cross_entropy"],
-        CrossEntropyLoss: ["cross_entropy"]
-    }
-
-    constructor_map = {}
-    for constructor, datatypes in cm.items():
-        for datatype in datatypes:
-            constructor_map[datatype] = constructor
-    global_config["constructor_map"] = constructor_map
-
-    # NNUpdate constructor mapping
-    update_cm = {
-        SGDUpdate: ["sgd"]
-    }
-
-    constructor_map = {}
-    for constructor, datatypes in update_cm.items():
-        for datatype in datatypes:
-            constructor_map[datatype] = constructor
-    global_config["update_constructor_map"] = constructor_map
-
-
-def create(src, data_dict=None):
-    """
-    create the network object from configuration source and
-    assign data to the network
-
-    :param src:
-        if str, the configuration file path
-        if dict, configuration python dictionary
-
-    :param data_dict:
-        dict, the key is the network input name defined by
-            the configurations, and the value is the
-            numpy.ndarray fed to the network's input
-
-    :return: the NNBase network object built
-    """
-    if len(global_config) == 0:
-        get_default_config()
-    if data_dict is None:
-        data_dict = {}
-    if isinstance(src, str):
-        return create_from_file(src, data_dict)
-    else:
-        return create_from_dict(src, data_dict)
-
-
-def create_from_file(config_path, data_dict=None):
-    """
-    create the network object from configuration file and
-    assign data to the network
-
-    :param config_path:
-        str, the configuration file path
-
-    :param data_dict:
-        dict, the key is the network input name defined by
-            the configurations, and the value is the
-            numpy.ndarray fed to the network's input
-
-    :return: the NNBase network object built
-    """
-    try:
-        config_file = open(config_path)
-    except IOError:
-        NNDebug.error_("unable to open configuration file '%s" % config_path)
-        return None
-
-    def remove_quote(line):
-        return line[:line.find("#")].strip()
-
-    lines = map(remove_quote, config_file.readlines())
-    config_file.close()
-
-    idx = 0
-    length = len(lines)
-
-    list_sections = {"paramlist": "param"}
-    single_sections = ["training"]
-
-    d = {
-        "param": [],
-        "input": [],
-        "weight": [],
-        "layer": [],
-        "loss": [],
-        "training": None
-    }
-
-    def eval_(v):
-        v = v.strip()
-        if v.startswith("[") and v.endswith("]"):
-            return map(eval_,
-                       v[1:-1].split(","))
-        elif v.find(",") >= 0:
-            return map(eval_,
-                       filter(lambda _: _.strip() != "",
-                              v.split(",")))
-        elif v.startswith("{"):
-            return dict([
-                (key, eval_(value))
-                for key, value in
-                filter(lambda _: len(_) == 2,
-                       [_.split(":") for _ in v[1:-1].split(",")])
-            ])
+        :return: the NNBase network object
+        """
+        if data_dict is None:
+            data_dict = {}
+        if isinstance(src, str):
+            return self.build_from_file(src, data_dict)
         else:
-            try:
-                v = string.atoi(v)
-            except ValueError:
+            return self.build_from_dict(src, data_dict)
+
+    def build_from_file(self, config_path, data_dict=None):
+        """
+        build the network object from configuration file and
+        assign data to the network
+
+        :param config_path:
+            str, the configuration file path
+
+        :param data_dict:
+            dict, the key is the network input name defined by
+                the configuration, and the value is the
+                numpy.ndarray fed to the network's input
+
+        :return: the NNBase network object
+        """
+        try:
+            config_file = open(config_path)
+        except IOError:
+            self.error("unable to open configuration file '%s" % config_path)
+            return None
+
+        def remove_quote(line):
+            return line[:line.find("#")].strip()
+
+        lines = map(remove_quote, config_file.readlines())
+        config_file.close()
+
+        idx = 0
+        length = len(lines)
+
+        list_sections = {"paramlist": "param"}
+        single_sections = ["training"]
+
+        d = {
+            "param": [],
+            "input": [],
+            "weight": [],
+            "layer": [],
+            "loss": [],
+            "training": None
+        }
+
+        def eval_(v):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                return map(eval_,
+                           v[1:-1].split(","))
+            elif v.find(",") >= 0:
+                return map(eval_,
+                           filter(lambda _: _.strip() != "",
+                                  v.split(",")))
+            elif v.startswith("{"):
+                return dict([
+                    (key, eval_(value))
+                    for key, value in
+                    filter(lambda _: len(_) == 2,
+                           [_.split(":") for _ in v[1:-1].split(",")])
+                ])
+            else:
                 try:
-                    v = string.atof(v)
+                    v = string.atoi(v)
                 except ValueError:
-                    pass
-            finally:
-                return v
+                    try:
+                        v = string.atof(v)
+                    except ValueError:
+                        pass
+                finally:
+                    return v
 
-    def read_block_(i):
-        while i < length:
-            line = lines[i]
-            if line.startswith("[") and \
-                    line.endswith("]"):
-                break
+        def read_block_(i):
+            while i < length:
+                line = lines[i]
+                if line.startswith("[") and \
+                        line.endswith("]"):
+                    break
+                i += 1
+            else:
+                return i
+
+            item = {}
+            section = lines[i][1:-1].strip()
             i += 1
-        else:
+
+            while i < length:
+                line = lines[i]
+                if line.startswith("["):
+                    break
+                i += 1
+                eq_idx = line.find("=")
+                if eq_idx < 0:
+                    continue
+                key = line[:eq_idx].strip()
+                value = line[eq_idx+1:].strip()
+                item[key] = eval_(value)
+
+            if section in list_sections:
+                d[list_sections[section]] += \
+                    [{"name": k, "value": v}
+                     for k, v in item.items()]
+            elif section in single_sections:
+                d[section] = item
+            elif section in d:
+                d[section].append(item)
+
             return i
 
-        item = {}
-        section = lines[i][1:-1].strip()
-        i += 1
+        while idx < length:
+            idx = read_block_(idx)
 
-        while i < length:
-            line = lines[i]
-            if line.startswith("["):
-                break
-            i += 1
-            eq_idx = line.find("=")
-            if eq_idx < 0:
-                continue
-            key = line[:eq_idx].strip()
-            value = line[eq_idx+1:].strip()
-            item[key] = eval_(value)
+        return self.build_from_dict(d, data_dict)
 
-        if section in list_sections:
-            d[list_sections[section]] += \
-                [{"name": k, "value": v}
-                 for k, v in item.items()]
-        elif section in single_sections:
-            d[section] = item
-        elif section in d:
-            d[section].append(item)
+    def build_from_dict(self, d, data_dict=None):
+        """
+        build the network object from configuration dictionary and
+        assign data to the network
 
-        return i
+        :param d:
+            dict, the configuration dictionary
 
-    while idx < length:
-        idx = read_block_(idx)
+        :param data_dict:
+            dict, the key is the network input name defined by
+                the configuration, and the value is the
+                numpy.ndarray fed to the network's input
 
-    return create_from_dict(d, data_dict)
+        :return: the NNBase network object
+        """
+
+        # basic objects
+        if data_dict is None:
+            data_dict = {}
+        nn = NNBase()
+        core = nn.get_core()
+        constructor_map = self.constructor_map
 
 
-def create_from_dict(d, data_dict=None):
-    """
-    create the network object from configuration dictionary and
-    assign data to the network
-
-    :param d:
-        dict, the configuration dictionary
-
-    :param data_dict:
-        dict, the key is the network input name defined by
-            the configurations, and the value is the
-            numpy.ndarray fed to the network's input
-
-    :return: the NNBase network object built
-    """
-
-    # basic objects
-    if data_dict is None:
-        data_dict = {}
-    nn = NNBase()
-    core = nn.get_core()
-    config = global_config
-
-    # debug utilities
-    def error_(s):
-        NNDebug.error_("[NN Constructor] " + str(s))
-
-    def assert_(cond, s):
-        NNDebug.assert_(cond, "[NN Constructor] " + str(s))
-
-    # build NNValue from non-uniform values
-    def eval_(v):
-        if isinstance(v, str):
-            refs = v.strip().split(".")
-            prefix = []
-            node = core["values"].get(refs[0])
-            if not node:
-                error_("value '%s' undefined" % refs[0])
-            prefix.append(refs[0])
-            node = node.node()
-
-            for ref in refs[1:]:
-                node = node.node(ref=ref)
+        # build NNValue from non-uniform values
+        def eval_(v):
+            if isinstance(v, str):
+                refs = v.strip().split(".")
+                prefix = []
+                node = core["values"].get(refs[0])
                 if not node:
-                    error_("value '%s' undefined in '%s'<%s>" % (ref, str.join(".", prefix), node))
-                prefix.append(ref)
+                    error_("value '%s' undefined" % refs[0])
+                prefix.append(refs[0])
+                node = node.node()
 
-            return node
+                for ref in refs[1:]:
+                    node = node.node(ref=ref)
+                    if not node:
+                        error_("value '%s' undefined in '%s'<%s>" % (ref, str.join(".", prefix), node))
+                    prefix.append(ref)
 
-        elif isinstance(v, int):
-            return NNScalarInt64(v)
+                return node
 
-        elif isinstance(v, float):
-            return NNScalarFloat32(v)
+            elif isinstance(v, int):
+                return NNScalarInt64(v)
 
-        elif isinstance(v, NNValue):
-            return v
+            elif isinstance(v, float):
+                return NNScalarFloat32(v)
 
-        else:
-            error_("unknown value '%s' for eval_()" % v)
+            elif isinstance(v, NNValue):
+                return v
 
-    # extract the wrapped value from input
-    def raw_(v):
-        if isinstance(v, NNValue):
-            return v.value()
-        elif isinstance(v, list):
-            return map(raw_, v)
-        else:
-            error_("unknown value '%s' for raw_()" % v)
+            else:
+                error_("unknown value '%s' for eval_()" % v)
 
-    # build input NNValue object
-    def make_input_(shape, datatype):
-        if isinstance(shape, int):
-            shape = [None for _ in range(shape)]
+        # extract the wrapped value from input
+        def raw_(v):
+            if isinstance(v, NNValue):
+                return v.value()
+            elif isinstance(v, list):
+                return map(raw_, v)
+            else:
+                error_("unknown value '%s' for raw_()" % v)
 
-        assert_(isinstance(shape, list), "the shape of input should be list")
-        assert_(isinstance(datatype, str), "the datatype of input should be str")
+        # build input NNValue object
+        def make_input_(shape, datatype):
+            if isinstance(shape, int):
+                shape = [None for _ in range(shape)]
 
-        shape = [None if x is None else raw_(eval_(x))
-                 for x in shape]
+            assert_(isinstance(shape, list), "the shape of input should be list")
+            assert_(isinstance(datatype, str), "the datatype of input should be str")
 
-        if len(shape) == 0:
-            constructor = config["constructor_map"].get(datatype)
-            if constructor:
-                return constructor()
-        else:
-            datatype = "[" + datatype + "]"
-            constructor = config["constructor_map"].get(datatype)
-            if constructor:
-                return constructor(shape=shape, v=None)
-        error_("unknown datatype '%s' for input" % datatype)
+            shape = [None if x is None else raw_(eval_(x))
+                     for x in shape]
 
-    # build shared NNValue object
-    def make_shared_(shape, init_method, datatype):
+            if len(shape) == 0:
+                constructor = config["constructor_map"].get(datatype)
+                if constructor:
+                    return constructor()
+            else:
+                datatype = "[" + datatype + "]"
+                constructor = config["constructor_map"].get(datatype)
+                if constructor:
+                    return constructor(shape=shape, v=None)
+            error_("unknown datatype '%s' for input" % datatype)
 
-        assert_(isinstance(datatype, str),
-                "the datatype of weight should be str")
-        assert_(datatype in ["float32", "int64"],
-                "datatype '%s' not supported for weights" % datatype)
-        assert_(datatype in config["constructor_map"],
-                "datatype '%s' not supported for weights" % datatype)
-        basetype = datatype
-        datatype = "[" + basetype + "]"
+        # build shared NNValue object
+        def make_shared_(shape, init_method, datatype):
 
-        shape = map(eval_, shape)
+            assert_(isinstance(datatype, str),
+                    "the datatype of weight should be str")
+            assert_(datatype in ["float32", "int64"],
+                    "datatype '%s' not supported for weights" % datatype)
+            assert_(datatype in config["constructor_map"],
+                    "datatype '%s' not supported for weights" % datatype)
+            basetype = datatype
+            datatype = "[" + basetype + "]"
 
-        assert_((
-            isinstance(shape, list) and
-            all([isinstance(_, NNScalarInt) for _ in shape]) and
-            all([_.has_raw() for _ in shape])
-        ), "shape of weight must be an constant integer array")
+            shape = map(eval_, shape)
 
-        shape = map(raw_, shape)
+            assert_((
+                isinstance(shape, list) and
+                all([isinstance(_, NNScalarInt) for _ in shape]) and
+                all([_.has_raw() for _ in shape])
+            ), "shape of weight must be an constant integer array")
 
-        if len(shape) == 0:
-            constructor = config["constructor_map"].get(datatype)
-            return constructor(v=0.0, shared=True)
+            shape = map(raw_, shape)
 
-        v = numpy.zeros(shape, dtype=basetype)
-        if init_method == "random":
-            high = 4.0 * numpy.sqrt(6.0 / sum(shape))
-            low = -high
+            if len(shape) == 0:
+                constructor = config["constructor_map"].get(datatype)
+                return constructor(v=0.0, shared=True)
 
-            def __randomize__(w, dims):
-                if len(dims) == 1:
-                    for i in range(dims[0]):
-                        w[i] = random.uniform(low, high)
-                else:
-                    for i in range(dims[0]):
-                        __randomize__(w[i], dims[1:])
+            v = numpy.zeros(shape, dtype=basetype)
+            if init_method == "random":
+                high = 4.0 * numpy.sqrt(6.0 / sum(shape))
+                low = -high
 
-            __randomize__(v, shape)
+                def __randomize__(w, dims):
+                    if len(dims) == 1:
+                        for i in range(dims[0]):
+                            w[i] = random.uniform(low, high)
+                    else:
+                        for i in range(dims[0]):
+                            __randomize__(w[i], dims[1:])
 
-        constructor = config["constructor_map"][datatype]
-        return constructor(shape=shape, v=v)
+                __randomize__(v, shape)
 
-    # build middle node NNValue
-    def make_layer_(layer):
-        layername = layer.get("name")
-        layertype = layer.get("type")
-        if not layertype:
-            error_("missing type for layer '%s'" % layername)
+            constructor = config["constructor_map"][datatype]
+            return constructor(shape=shape, v=v)
 
-        constructor = config["constructor_map"].get(layertype)
-        if not constructor:
-            error_("unknown layer type '%s'" % layertype)
+        # build middle node NNValue
+        def make_layer_(layer):
+            layername = layer.get("name")
+            layertype = layer.get("type")
+            if not layertype:
+                error_("missing type for layer '%s'" % layername)
 
-        inputs = layer.get("input", [])
-        if not isinstance(inputs, list):
-            inputs = [inputs]
-        inputs = map(eval_, inputs)
-        params = dict([(k, eval_(v)) for k, v in layer.get("param", {}).items()])
+            constructor = config["constructor_map"].get(layertype)
+            if not constructor:
+                error_("unknown layer type '%s'" % layertype)
 
-        layer_obj = constructor(layername, inputs, params)
-        assert_(isinstance(layer_obj, Layer), "datatype for layer should be Layer")
-        return layer_obj
+            inputs = layer.get("input", [])
+            if not isinstance(inputs, list):
+                inputs = [inputs]
+            inputs = map(eval_, inputs)
+            params = dict([(k, eval_(v)) for k, v in layer.get("param", {}).items()])
 
-    # build loss function node NNValue
-    def make_loss_(loss):
-        lossname = loss.get("name")
-        losstype = loss.get("type")
-        if not losstype:
-            error_("missing type for loss '%s'" % lossname)
+            layer_obj = constructor(layername, inputs, params)
+            assert_(isinstance(layer_obj, Layer), "datatype for layer should be Layer")
+            return layer_obj
 
-        constructor = config["constructor_map"].get(losstype)
-        if not constructor:
-            error_("unknown loss type '%s'" % losstype)
+        # build loss function node NNValue
+        def make_loss_(loss):
+            lossname = loss.get("name")
+            losstype = loss.get("type")
+            if not losstype:
+                error_("missing type for loss '%s'" % lossname)
 
-        inputs = loss.get("input", [])
-        if not isinstance(inputs, list):
-            inputs = [inputs]
-        inputs = map(eval_, inputs)
-        params = dict([(k, eval_(v)) for k, v in loss.get("param", {}).items()])
+            constructor = config["constructor_map"].get(losstype)
+            if not constructor:
+                error_("unknown loss type '%s'" % losstype)
 
-        loss_obj = constructor(lossname, inputs, params)
-        assert_(isinstance(loss_obj, Loss), "datatype for loss should be Loss")
-        return loss_obj
+            inputs = loss.get("input", [])
+            if not isinstance(inputs, list):
+                inputs = [inputs]
+            inputs = map(eval_, inputs)
+            params = dict([(k, eval_(v)) for k, v in loss.get("param", {}).items()])
 
-    # build NNValue from raw data
-    def wrap_data_(data):
-        if isinstance(data, float):
-            return NNScalarFloat32(v=data, shared=True)
-        elif isinstance(data, int):
-            return NNScalarInt64(v=data, shared=True)
-        elif isinstance(data, numpy.ndarray):
-            return NNArrayFloat32(v=data, shape=data.shape)
-        else:
-            error_("type '%s' not supported for input data" % type(data))
+            loss_obj = constructor(lossname, inputs, params)
+            assert_(isinstance(loss_obj, Loss), "datatype for loss should be Loss")
+            return loss_obj
 
-    # build NNUpdate
-    def make_update_(loss, ws, params):
-        assert_(isinstance(loss, Loss),
-                "loss function should be Loss")
-        assert_(all([isinstance(w, NNValue) and w.has_raw()
-                     for w in ws.values()]),
-                "update targets should be durable NNValue")
+        # build NNValue from raw data
+        def wrap_data_(data):
+            if isinstance(data, float):
+                return NNScalarFloat32(v=data, shared=True)
+            elif isinstance(data, int):
+                return NNScalarInt64(v=data, shared=True)
+            elif isinstance(data, numpy.ndarray):
+                return NNArrayFloat32(v=data, shape=data.shape)
+            else:
+                error_("type '%s' not supported for input data" % type(data))
 
-        gradtype = params.get("method", "sgd")
-        constructor = config["update_constructor_map"].get(gradtype)
-        if not constructor:
-            error_("unknown update type '%s'" % gradtype)
+        # build NNUpdate
+        def make_update_(loss, ws, params):
+            assert_(isinstance(loss, Loss),
+                    "loss function should be Loss")
+            assert_(all([isinstance(w, NNValue) and w.has_raw()
+                         for w in ws.values()]),
+                    "update targets should be durable NNValue")
 
-        update_obj = constructor(loss, ws, params)
-        assert_(isinstance(update_obj, Update), "datatype for update should be Update")
-        return update_obj
+            gradtype = params.get("method", "sgd")
+            constructor = config["update_constructor_map"].get(gradtype)
+            if not constructor:
+                error_("unknown update type '%s'" % gradtype)
 
-    # check name validity
-    def check_name_(s):
-        if (not isinstance(s, str)) or s == "":
-            error_("bad format name '%s'" % s)
-        elif s in core["values"]:
-            error_("duplicate definition '%s'" % s)
+            update_obj = constructor(loss, ws, params)
+            assert_(isinstance(update_obj, Update), "datatype for update should be Update")
+            return update_obj
 
-    # start building process
+        # check name validity
+        def check_name_(s):
+            if (not isinstance(s, str)) or s == "":
+                error_("bad format name '%s'" % s)
+            elif s in core["values"]:
+                error_("duplicate definition '%s'" % s)
 
-    # parameters
-    for item in d.get("param", []):
-        name = item.get("name", "")
-        check_name_(name)
-        value = item.get("value")
-        if value is None:
-            error_("missing value for parameter '%s'" % name)
-        core["values"][name] = eval_(value)
+        # start building process
 
-    # inputs
-    for item in d.get("input", []):
-        name = item.get("name", "")
-        check_name_(name)
-        shp = item.get("shape")
-        if shp is None:
-            error_("missing shape for input '%s'" % name)
-        dtype = item.get("type", "float32")
-        value = make_input_(shp, dtype)
-        core["values"][name] = value
-        core["inputs"][name] = value
-        if name in data_dict:
-            core["data"][name] = wrap_data_(data_dict[name])
+        # parameters
+        for item in d.get("param", []):
+            name = item.get("name", "")
+            check_name_(name)
+            value = item.get("value")
+            if value is None:
+                error_("missing value for parameter '%s'" % name)
+            core["values"][name] = eval_(value)
 
-    # weights
-    for item in d.get("weight", []):
-        name = item.get("name", "")
-        check_name_(name)
-        shp = item.get("shape", [])
-        init = item.get("init", "random")
-        dtype = item.get("type", "float32")
-        value = make_shared_(shp, init, dtype)
-        core["values"][name] = value
-        core["weights"][name] = value
-        if item.get("update", True):
-            core["learn"][name] = value
+        # inputs
+        for item in d.get("input", []):
+            name = item.get("name", "")
+            check_name_(name)
+            shp = item.get("shape")
+            if shp is None:
+                error_("missing shape for input '%s'" % name)
+            dtype = item.get("type", "float32")
+            value = make_input_(shp, dtype)
+            core["values"][name] = value
+            core["inputs"][name] = value
+            if name in data_dict:
+                core["data"][name] = wrap_data_(data_dict[name])
 
-    # layers
-    for item in d.get("layer", []):
-        name = item.get("name", "")
-        check_name_(name)
-        core["values"][name] = make_layer_(item)
+        # weights
+        for item in d.get("weight", []):
+            name = item.get("name", "")
+            check_name_(name)
+            shp = item.get("shape", [])
+            init = item.get("init", "random")
+            dtype = item.get("type", "float32")
+            value = make_shared_(shp, init, dtype)
+            core["values"][name] = value
+            core["weights"][name] = value
+            if item.get("update", True):
+                core["learn"][name] = value
 
-    # losses
-    for item in d.get("loss", []):
-        name = item.get("name", "")
-        check_name_(name)
-        value = make_loss_(item)
-        core["values"][name] = value
+        # layers
+        for item in d.get("layer", []):
+            name = item.get("name", "")
+            check_name_(name)
+            core["values"][name] = make_layer_(item)
 
-    # training
-    item = d.get("training", None)
-    if not item:
-        error_("missing training section")
-    if "loss" not in item:
-        error_("missing loss function")
-    core["loss"] = eval_(item["loss"])
-    core["updates"] = make_update_(
-        core["loss"],
-        core["learn"],
-        {
-            "learning_rate": item.get("learning_rate", 0.1),
-            "method": item.get("method", "sgd")
-        }
-    )
-    test_info = item.get("test_info", [])
-    if not isinstance(test_info, list):
-        test_info = [test_info]
-    core["test_info"] = [(n, eval_(n)) for n in test_info]
+        # losses
+        for item in d.get("loss", []):
+            name = item.get("name", "")
+            check_name_(name)
+            value = make_loss_(item)
+            core["values"][name] = value
 
-    train_info = item.get("train_info", [])
-    if not isinstance(train_info, list):
-        train_info = [train_info]
-    core["train_info"] = [(n, eval_(n)) for n in train_info]
+        # training
+        item = d.get("training", None)
+        if not item:
+            error_("missing training section")
+        if "loss" not in item:
+            error_("missing loss function")
+        core["loss"] = eval_(item["loss"])
+        core["updates"] = make_update_(
+            core["loss"],
+            core["learn"],
+            {
+                "learning_rate": item.get("learning_rate", 0.1),
+                "method": item.get("method", "sgd")
+            }
+        )
+        test_info = item.get("test_info", [])
+        if not isinstance(test_info, list):
+            test_info = [test_info]
+        core["test_info"] = [(n, eval_(n)) for n in test_info]
 
-    return nn
+        train_info = item.get("train_info", [])
+        if not isinstance(train_info, list):
+            train_info = [train_info]
+        core["train_info"] = [(n, eval_(n)) for n in train_info]
+
+        return nn
 
 
 class NNValue(object):

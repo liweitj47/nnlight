@@ -1,7 +1,6 @@
 import theano
-
-from layers import Layer, LayerWithData
 from theano import tensor
+from layers import Layer, LayerWithData
 from utils.constructor import Constructor
 
 

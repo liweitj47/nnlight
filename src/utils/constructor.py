@@ -1,15 +1,26 @@
+from layer.logistic import LogisticLayer
+from layer.lstm import LstmLayer
+from layer.max_pooling import MaxPoolingLayer
+from layer.sentence_conv import SentenceConvolutionLayer
+from layer.softmax import SoftmaxLayer, SequencialSoftmaxLayer
+from layer.tensor import LowRankTensorLayer
+from loss.cross_entropy import CrossEntropyLoss, BinaryCrossEntropyLoss
+from loss.max_margin import MaxMarginLoss
+
+from layer.basic.simple import SimpleLayer
+from updater.updaters import SGDUpdater
 from utils.debug import NNDebug
+from value.values import NNScalarInt64, NNArrayFloat32, NNScalarFloat32
 
 cm = {
         # value
         NNScalarInt64: ["int64", "int"],
         NNScalarFloat32: ["float32", "float"],
         NNArrayFloat32: ["[float32]", "[float]"],
-        NNArrayInt64: ["[int64]", "[int]"],
 
         # layer
         SimpleLayer: ["simple"],
-        SentenceConvLayer: ["sentence_convolution"],
+        SentenceConvolutionLayer: ["sentence_convolution"],
         MaxPoolingLayer: ["max_pooling"],
         SoftmaxLayer: ["softmax"],
         LogisticLayer: ["logistic"],
@@ -23,15 +34,14 @@ cm = {
         CrossEntropyLoss: ["cross_entropy"],
 
         # parameter updater
-        SGDUpdate: ["sgd"]
+        SGDUpdater: ["sgd"]
     }
 
 default_constructor_map = {}
-for constructor, datatypes in cm.items():
+for constr, datatypes in cm.items():
     for datatype in datatypes:
-        default_constructor_map[datatype] = constructor
+        default_constructor_map[datatype] = constr
 constructor_map = dict(default_constructor_map.items())
-
 
 
 class Constructor:

@@ -6,7 +6,7 @@ from core import NNCore
 from layer.layers import Layer
 from loss.loss import Loss
 from network import Network
-from theano.theano_builder import TheanoBackendBuilder
+from theano_impl.theano_builder import TheanoBackendBuilder
 from updater.updaters import Updater
 from utils.configparser import ConfigParser
 from utils.constructor import Constructor
@@ -45,7 +45,7 @@ class NNBuilder:
                 the configuration, and the value is the
                 numpy.ndarray fed to the network's input
 
-        :return: the NNBase network object
+        :return: the Network object
         """
         if data_dict is None:
             data_dict = {}

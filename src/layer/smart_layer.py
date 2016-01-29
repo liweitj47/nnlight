@@ -78,7 +78,12 @@ class SmartLayer(Layer):
             # add object attributes
             for name in self.all_info:
                 if not hasattr(self, name):
-                    setattr(self, name, self.all_info[name])
+                    setattr(self, name, self.all_info[name].value)
+
+
+            at least one input/output
+
+            def constrait(): a=b+2 , c!=1
 
     def info(self):
         self.error("you must override info() method for your smart layer")

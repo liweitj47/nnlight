@@ -1,16 +1,16 @@
-from layer.logistic import LogisticLayer
+from layer.basic.simple import SimpleLayer
+from layer.basic.logistic import LogisticLayer
 from layer.lstm import LstmLayer
-from layer.max_pooling import MaxPoolingLayer
-from layer.sentence_conv import SentenceConvolutionLayer
+from layer.basic.pooling import MaxPoolingLayer
+from layer.basic.sentence_conv import SentenceConvolutionLayer
 from layer.softmax import SoftmaxLayer, SequencialSoftmaxLayer
 from layer.tensor import LowRankTensorLayer
 from loss.cross_entropy import CrossEntropyLoss, BinaryCrossEntropyLoss
 from loss.max_margin import MaxMarginLoss
-
-from layer.basic.simple import SimpleLayer
 from updater.updaters import SGDUpdater
 from utils.debug import NNDebug
 from value.values import NNScalarInt64, NNArrayFloat32, NNScalarFloat32
+
 
 cm = {
         # value
@@ -21,7 +21,7 @@ cm = {
         # layer
         SimpleLayer: ["simple"],
         SentenceConvolutionLayer: ["sentence_convolution"],
-        MaxPoolingLayer: ["max_pooling"],
+        MaxPoolingWithTimeLayer: ["max_pooling"],
         SoftmaxLayer: ["softmax"],
         LogisticLayer: ["logistic"],
         LowRankTensorLayer: ["low_rank_tensor"],

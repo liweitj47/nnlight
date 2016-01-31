@@ -16,6 +16,7 @@ class SmartLayer(Layer):
     def __init__(self, name, params, core):
         Layer.__init__(name)
         self.name = name
+        self.params = params
 
         #  ValueInfo dict for layer's components
         self.inputs_info = {}
@@ -75,15 +76,15 @@ class SmartLayer(Layer):
                 self.error("invalid usage string for param '%s' defined in info(),"
                            " (input|output|weight)" % usage)
 
+            if len(self.inputs_info) < 1:
+                self.error("at least one input should be defined in info()")
+            if len(self.outputs_info) < 1:
+                self.error("at least one output should be defined in info()")
+
             # add object attributes
             for name in self.all_info:
                 if not hasattr(self, name):
                     setattr(self, name, self.all_info[name].value)
-
-
-            at least one input/output
-
-            def constrait(): a=b+2 , c!=1
 
     def info(self):
         self.error("you must override info() method for your smart layer")
@@ -122,8 +123,16 @@ class SmartLayer(Layer):
                            "but actually %d" % (self.name, usage, name, len(shape_template), len(shape)))
             for i, (si, ti) in enumerate(zip(shape, shape_template)):
                 if isinstance(ti, str):
-                    if ti in pool:
+                    res = self.try_parse_expression(ti, pool)
+                    if res > 0:
+                        ti = res
+                    elif ti in pool:
                         ti = pool[ti]
+                    elif ti in self.params:
+                        self.check(isinstance(self.params[ti], int),
+                                   "'%s' 's %dth element '%s' defined by info() expected "
+                                   "to be an integer" % (name, i, ti))
+                        ti = self.params[ti]
                     else:
                         if shape[i] > 0:
                             pool[ti] = si
@@ -138,6 +147,63 @@ class SmartLayer(Layer):
                     elif si <= 0:
                         shape[i] = ti
             info.value.set_shape(shape)
+
+    def try_parse_expression(self, s, pool):
+        s = s.strip()
+        terms = []
+        ops = []
+        idx = 0
+
+        def read_term(i):
+            term = ""
+            while i < len(s) and s[i] not in {' ', '-', '+'}:
+                term += s[i]
+                i += 1
+            if len(term) == 0:
+                self.error("invalid format for shape element '%s' defined in info()" % s)
+            return i, term
+
+        def read_op(i):
+            while i < len(s):
+                if s[i] != ' ':
+                    break
+                i += 1
+            else:
+                return i, None
+            if s[i] not in {'+', '-'}:
+                self.error("invalid format for shape element '%s' defined in info()" % s)
+            return i + 1, s[i]
+
+        def eval_term(term):
+            try:
+                result = int(term)
+            except ValueError:
+                if not (term in pool or term in self.params):
+                    self.error("unknown shape element '%s' of '%s' defined in info()" % (term, s))
+                result = pool[term] if term in pool else self.params[term]
+            self.check(isinstance(result, int),
+                       "'%s' expected to be integer defined in info()" % term)
+            return result
+
+        idx, first_term = read_term(idx)
+        terms.append(first_term)
+        while idx < len(s):
+            idx, next_op = read_op(idx)
+            if next_op is None:
+                break
+            idx, next_term = read_term(idx)
+            terms.append(next_term)
+            ops.append(next_op)
+        if len(terms) < 2:
+            return -1
+        else:
+            res = eval_term(terms[0])
+            for next_term, next_op in zip(terms[1:], ops):
+                if next_op == '-':
+                    res -= eval_term(next_term)
+                elif next_op == '+':
+                    res += eval_term(next_term)
+            return res
 
     # is it necessary?
     def get_theano_output(self, diagram):

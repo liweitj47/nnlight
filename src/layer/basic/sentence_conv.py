@@ -10,8 +10,7 @@ class SentenceConvolutionLayer(SmartLayer):
             ("sentence", "input", ["samples", "features", "max_length"]),
             ("mask", "input", ["samples", "max_length"]),
             ("filter", "weight", ["depth", "features", "window"]),
-            ("output", "output", ["samples", -1, "depth"])
-            # arithmetic expression(max_length - window + 1) not supported now
+            ("output", "output", ["samples", "max_length - window + 1", "depth"])
         ]
 
     def get_theano_output_smart(self, n):

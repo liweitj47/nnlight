@@ -18,7 +18,7 @@ class SentenceConvolutionLayer(SmartLayer):
         conv = theano.tensor.nnet.conv.conv2d(
             input=n.sentence.dimshuffle(0, 'x', 1, 2),
             filters=n.filter.dimshuffle(0, 'x', 1, 2),
-            filter_shape=[filter_shape[0], filter_shape[1], 1, filter_shape[2]]
+            filter_shape=[filter_shape[0], 1, filter_shape[1], filter_shape[2]]
         )
         window = filter_shape[2]
         mask = n.mask[:, :1 - window]

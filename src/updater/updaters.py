@@ -19,12 +19,14 @@ class SGDUpdater(Updater):
 
     def get_theano_updates(self, diagram, core):
         loss = diagram.get(core.optimizing_target)
-        weights = [diagram.get(w.get_output()) for w in core.to_learn.values()]
         updates = []
-        for weight in weights:
-            grad = theano.grad(loss, weight)
+        for weight in core.to_learn.values():
+            weight_value = weight.get_value()
+            weight_symbol = diagram.get(weight_value)
+            weight_data = diagram.get_shared(weight_value)
+            grad = theano.grad(loss, weight_symbol)  # real data is used through given clause thus not part of graph
             updates.append((
-                weight,
-                weight - self.learning_rate * grad
+                weight_data,
+                weight_data - self.learning_rate * grad
             ))
         return updates

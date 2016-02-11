@@ -2,7 +2,7 @@
 """
 
 """
-from utils.debug import NNDebug
+from utility.debug import NNDebug
 
 
 class Network:

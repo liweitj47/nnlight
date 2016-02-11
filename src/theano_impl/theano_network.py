@@ -4,8 +4,8 @@
 """
 import math
 import numpy
-from layer.weight import WeightLayer
-from layer.input import InputLayer
+from layer.basic.input import InputLayer
+from layer.basic.weight import WeightLayer
 from network import Network
 
 
@@ -79,20 +79,22 @@ class TheanoNetwork(Network):
         for i in range(iters):
             result = None
             for b in range(block_num):
-                batch_num = 0
-                block_beg = b * self.maximum_sample_size
-                block_end = block_beg + self.maximum_sample_size
                 if block_num > 1:
+                    block_beg = b * self.maximum_sample_size
+                    block_end = block_beg + self.maximum_sample_size
                     for inp in self.inputs:
                         block = inp.get_data()[block_beg, block_end]
                         inp.set_theano_shared(block)
-                        batch_num = int(math.ceil(block.shape[0] / batch_size))
+                else:
+                    block_beg = 0
+                    block_end = self.total_sample_size
 
+                batch_num = int(math.ceil((block_end - block_beg) / float(batch_size)))
                 for batch in range(batch_num):
                     batch_begin = batch * batch_size
                     batch_end = (batch+1) * batch_size
-                    if batch_end > block.shape[0]:
-                        batch_end = block.shape[0]
+                    if batch_end > block_end:
+                        batch_end = block_end
                     new_result = self.base_train_func(batch_begin, batch_end)
 
                     if result is None:

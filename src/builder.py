@@ -8,9 +8,9 @@ from loss.loss import Loss
 from network import Network
 from theano_impl.theano_builder import TheanoBackendBuilder
 from updater.updaters import Updater
-from utils.configparser import ConfigParser
-from utils.constructor import Constructor
-from utils.debug import NNDebug
+from utility.configparser import ConfigParser
+from utility.constructor import Constructor
+from utility.debug import NNDebug
 from value.values import NNValue
 
 
@@ -129,11 +129,11 @@ class NNBuilder:
         for item in d.get("weight", []):
             name = item.get("name", "")
             self.check_name(name)
-            shape = item.get("shape", None)
+            shape = self.eval(item.get("shape"))
             if shape is None:
                 self.error("missing shape field for weight '%s'" % name)
-            self.check(isinstance(shape, list) and len(shape) > 0 and all([isinstance(x, int) and x > 0 for x in shape]),
-                       "shape for weight '%s' should be non-empty positive integer array" % name)
+            self.check(isinstance(shape, list) and all([isinstance(x, int) and x > 0 for x in shape]),
+                       "shape for weight '%s' should be positive integer array" % name)
             init = item.get("init", "random")
             dtype = item.get("type", "float32")
             to_learn = item.get("update", True)
@@ -143,9 +143,11 @@ class NNBuilder:
         for item in d.get("layer", []):
             name = item.get("name", "")
             self.check_name(name)
-            ltype = item.get("type", None)
+            ltype = item.get("type")
             if not ltype:
                 self.error("missing type field in layer '%s'" % name)
+            item.pop("name")
+            item.pop("type")
             self.make_layer(name, ltype, item)
 
         # losses
@@ -155,6 +157,8 @@ class NNBuilder:
             ltype = item.get("type", None)
             if not ltype:
                 self.error("missing type field in loss '%s'" % name)
+            item.pop("name")
+            item.pop("type")
             self.make_loss(name, ltype, item)
 
         # training
@@ -173,6 +177,8 @@ class NNBuilder:
             item
         )
         output_infos = item.get("outputs", [])
+        if not isinstance(output_infos, list):
+            output_infos = [output_infos]
         for output_info in output_infos:
             output = self.eval(output_info)
             self.check(isinstance(output, NNValue),
@@ -181,7 +187,9 @@ class NNBuilder:
 
     def eval(self, v):
         if isinstance(v, str):
-            if v in self.values:
+            if v.startswith('"') and v.endswith('"'):
+                return v[1:-1]
+            elif v in self.values:
                 return self.values[v]
             else:
                 names = v.strip().split(".")
@@ -191,14 +199,16 @@ class NNBuilder:
                 sub = None if len(names) == 1 else names[1]
                 value = layer.get_value(name=sub)
                 self.check(isinstance(value, NNValue),
-                           "NNLayer.value() should return NNValue object for '%s'" % v)
+                           "%s.get_value() should return NNValue object for '%s'" % (layer.__class__.__name__, v))
                 return value
         elif isinstance(v, int):
             return v
         elif isinstance(v, float):
             return v
+        elif isinstance(v, list):
+            return [self.eval(_) for _ in v]
         else:
-            self.error("unknown value '%s' with type '%s' for eval()" % (v, type(v)))
+            self.error("unknown value '%s' with type '%s' for eval()" % (v, v.__class__.__name__))
 
     def make_input(self, name, shape, dtype, data):
         if dtype not in self.valid_input_dtypes:
@@ -240,11 +250,15 @@ class NNBuilder:
                    "loss '%s: %s' should be Loss instance" % (name, ltype))
         self.core.add_loss(name, loss)
 
-    def make_update(self, method, learning_rate, params):
+    def make_update(self, method, learning_rate, item):
         constructor = Constructor.get_constructor(method)
         if not constructor:
             self.error("unknown update type '%s'" % method)
-        updater = constructor(learning_rate, params, self.core)
+        if "method" in item:
+            item.pop("method")
+        if "learning_rate" in item:
+            item.pop("learning_rate")
+        updater = constructor(learning_rate, item, self.core)
         self.check(isinstance(updater, Updater), "'%s' update should be Updater instance" % method)
         self.core.set_updater(updater)
 

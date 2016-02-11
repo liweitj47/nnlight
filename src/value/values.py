@@ -12,14 +12,13 @@ class NNValue:
     def get_father(self):
         return self.father
 
-    def get_element_size(self):
-        pass
+    '''
+    def get_element_size(self)
 
-    def get_shape(self):
-        pass
+    def get_shape(self)
 
-    def set_shape(self, shape):
-        pass
+    def set_shape(self, shape)
+    '''
 
 
 class NNScalar(NNValue):
@@ -29,6 +28,9 @@ class NNScalar(NNValue):
 
     def get_shape(self):
         return []
+
+    def set_shape(self, shape):
+        pass
 
 
 class NNScalarInt64(NNScalar):

@@ -1,22 +1,28 @@
-from layer.basic.simple import SimpleLayer
+from layer.basic.input import InputLayer
 from layer.basic.logistic import LogisticLayer
-from layer.lstm import LstmLayer
-from layer.basic.pooling import MaxPoolingLayer
+from layer.basic.lstm import LstmLayer
+from layer.basic.pooling import MaxPoolingWithTimeLayer
 from layer.basic.sentence_conv import SentenceConvolutionLayer
-from layer.softmax import SoftmaxLayer, SequencialSoftmaxLayer
-from layer.tensor import LowRankTensorLayer
-from loss.cross_entropy import CrossEntropyLoss, BinaryCrossEntropyLoss
-from loss.max_margin import MaxMarginLoss
+from layer.basic.simple import SimpleLayer
+from layer.basic.softmax import SoftmaxLayer, SequencialSoftmaxLayer
+from layer.basic.tensor import LowRankTensorLayer
+from layer.basic.weight import WeightLayer
+from loss.basic.cross_entropy import CrossEntropyLoss, BinaryCrossEntropyLoss
+from loss.basic.cross_entropy import SequencialCrossEntropyLoss, SequencialBinaryCrossEntropyLoss
+from loss.basic.max_margin import MaxMarginLoss
 from updater.updaters import SGDUpdater
-from utils.debug import NNDebug
+from utility.debug import NNDebug
 from value.values import NNScalarInt64, NNArrayFloat32, NNScalarFloat32
-
 
 cm = {
         # value
         NNScalarInt64: ["int64", "int"],
         NNScalarFloat32: ["float32", "float"],
         NNArrayFloat32: ["[float32]", "[float]"],
+
+        # general
+        InputLayer: ["input"],
+        WeightLayer: ["weight"],
 
         # layer
         SimpleLayer: ["simple"],
@@ -32,10 +38,13 @@ cm = {
         MaxMarginLoss: ["max_margin_loss"],
         BinaryCrossEntropyLoss: ["binary_cross_entropy"],
         CrossEntropyLoss: ["cross_entropy"],
+        SequencialBinaryCrossEntropyLoss: ["sequencial_binary_cross_entropy"],
+        SequencialCrossEntropyLoss: ["sequencial_cross_entropy"],
 
         # parameter updater
         SGDUpdater: ["sgd"]
     }
+
 
 default_constructor_map = {}
 for constr, datatypes in cm.items():
@@ -55,12 +64,12 @@ class Constructor:
 
     @staticmethod
     def get_default_constructor(name):
-        return default_constructor_map.get(name, None)
+        return default_constructor_map.get(name)
 
     @staticmethod
     def get_default_array_constructor(name):
         if name.startswith("["):
-            return default_constructor_map.get(name, None)
+            return default_constructor_map.get(name)
         else:
             return default_constructor_map.get("[" + name + "]", None)
 
@@ -85,4 +94,3 @@ class Constructor:
             if constructor is None:
                 NNDebug.error("[Constructor] invalid dtype for create_value(): '%s'" % dtype)
             return constructor(shape, father)
-

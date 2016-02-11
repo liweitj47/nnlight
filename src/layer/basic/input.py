@@ -1,15 +1,15 @@
 import theano
 from theano import tensor
-from layers import Layer, LayerWithData
-from utils.constructor import Constructor
+from layer.layers import Layer, LayerWithData
 
 
 class InputLayer(LayerWithData):
 
     def __init__(self, name, shape, dtype, data):
-        Layer.__init__(self)
+        Layer.__init__(self, name, None, None)
         self.name = name
         self.data = data
+        from utility.constructor import Constructor
         constructor = Constructor.get_default_array_constructor(dtype)
         if not constructor:
             self.error("invalid datatype '%s' for input layer '%s'" % (dtype, name))
@@ -18,17 +18,17 @@ class InputLayer(LayerWithData):
     def get_inputs(self):
         return []
 
-    def get_output(self, name=None):
+    def get_value(self, name=None):
         if name is not None:
             return None
         else:
             return self.output
 
     def get_outputs(self):
-        return [self.get_output()]
+        return [self.get_value()]
 
     def get_shape(self):
-        return self.get_output().get_shape()
+        return self.get_value().get_shape()
 
     def get_data(self):
         return self.data
@@ -36,9 +36,12 @@ class InputLayer(LayerWithData):
     def set_data(self, data):
         self.data = data
 
+    def check_input_type(self):
+        pass
+
     def forward_shape(self, override=False):
-        shape0 = self.data.shape
-        shape1 = self.get_output().get_shape()
+        shape0 = [int(x) for x in self.data.shape]  # ensure integers be int type
+        shape1 = self.get_value().get_shape()
         if len(shape0) != len(shape1):
             self.error("inconsistent input data dimension for '%s',%d expected "
                        "but actually %d" % (self.name, len(shape1), len(shape0)))
@@ -51,11 +54,11 @@ class InputLayer(LayerWithData):
                 expected = [d if d > 0 else 'x' for d in shape1]
                 self.error("inconsistent input data shape for '%s', %s expected "
                            "but actually %s" % (self.name, expected, shape0))
-        self.get_output().set_shape(shape1)
+        self.get_value().set_shape(shape1)
 
     def backward_shape(self, override=False):
-        shape0 = self.data.shape
-        shape1 = self.get_output().get_shape()
+        shape0 = [int(x) for x in self.data.shape]  # ensure integers be int type
+        shape1 = self.get_value().get_shape()
         if len(shape0) != len(shape1):
             self.error("inconsistent input data dimension for '%s', %d expected "
                        "but actually %d" % (self.name, len(shape1), len(shape0)))
@@ -81,7 +84,10 @@ class InputLayer(LayerWithData):
 
     def get_theano_shared(self, maximum_sample_size):
         if not hasattr(self, "theano_shared_data"):
-            block = self.get_data()[0:maximum_sample_size]
+            if not maximum_sample_size:
+                block = self.get_data()
+            else:
+                block = self.get_data()[0:maximum_sample_size]
             setattr(self, "theano_shared_data", theano.shared(block, borrow=True))
         return getattr(self, "theano_shared_data")
 

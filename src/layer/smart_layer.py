@@ -1,6 +1,5 @@
 import itertools
-from layers import Layer
-from utils.constructor import Constructor
+from layer.layers import Layer
 from value.values import NNValue
 
 
@@ -14,7 +13,7 @@ class ValueInfo:
 class SmartLayer(Layer):
 
     def __init__(self, name, params, core):
-        Layer.__init__(name)
+        Layer.__init__(self, name, params, core)
         self.name = name
         self.params = params
 
@@ -32,34 +31,49 @@ class SmartLayer(Layer):
         infos = self.info()
         self.check(isinstance(infos, list) and
                    all([(isinstance(x, tuple) or isinstance(x, list)) and len(x) >= 3 for x in infos]),
-                   "%s.info() should return a list of (name, usage, shape, [dtype]) tuple" % type(self))
+                   "%s.info() should return a list of (name, usage, shape, [dtype]) tuple" % self.__class__.__name__)
         for info in infos:
             if len(info) == 3:
-                info = (info[0], info[1], info[2], "float32")
-            name, usage, shape, dtype = info
-            self.check(isinstance(shape, list) and all([isinstance(x, str) or isinstance(x, int) for x in shape]),
+                info = (info[0], info[1], info[2], "")
+            name, usage, template_shape, flags = info
+            flags = flags.split(";")
+            available_dtype = {"float32", "float64", "int32", "int64", "float", "int"}
+            dtype = "float32"
+            for d in flags:
+                if d in available_dtype:
+                    dtype = d
+                    break
+            extra = any([_ == "extra" for _ in flags])
+            initial_shape = [x if isinstance(x, int) else -1 for x in template_shape]
+            self.check(isinstance(template_shape, list) and
+                       all([isinstance(x, str) or isinstance(x, int) for x in template_shape]),
                        "invalid shape for param '%s' defined in info()" % name)
             self.check(name not in self.all_info,
                        "duplicate info item '%s' defined in info()" % name)
 
             value = params.get(name)
+            self.check(usage != "output" or value is None,
+                       "'%s' already defined as output in info()" % name)
             if value is None:
+                from utility.constructor import Constructor
                 if usage == "weight":
                     constructor = Constructor.get_constructor("weight")
                     if not constructor:
                         self.error("weight layer constructor missed")
-                    registry_name = str(type(self)) + "." + name
-                    weight = constructor(registry_name, shape, dtype, "random")
+                    registry_name = self.__class__.__name__ + "." + name
+                    weight = constructor(registry_name, initial_shape, dtype, "random")
                     core.add_weight(registry_name, weight)
                 elif usage == "output":
-                    value = Constructor.create_value(self, shape, dtype)
+                    value = Constructor.create_value(self, initial_shape, dtype)
+                elif extra:
+                    pass
                 else:
-                    self.error("missing input param '%s' defined in info()" % name)
-            self.check(isinstance(value, NNValue),
+                    self.error("missing input param '%s' defined in info() for '%s'" % (name, self.name))
+            self.check(isinstance(value, NNValue) or extra,
                        "invalid input param '%s', expect a NNValue instance "
-                       "defined in info() but actually receive a '%s'" % (name, type(value)))
+                       "defined in info() but actually receive a '%s'" % (name, value.__class__.__name__))
 
-            info_obj = ValueInfo(shape, dtype, value)
+            info_obj = ValueInfo(template_shape, dtype, value)
             if usage == "input":
                 self.all_info[name] = info_obj
                 self.inputs_info[name] = info_obj
@@ -76,15 +90,15 @@ class SmartLayer(Layer):
                 self.error("invalid usage string for param '%s' defined in info(),"
                            " (input|output|weight)" % usage)
 
-            if len(self.inputs_info) < 1:
-                self.error("at least one input should be defined in info()")
-            if len(self.outputs_info) < 1:
-                self.error("at least one output should be defined in info()")
+        if len(self.inputs_info) < 1:
+            self.error("at least one input should be defined in info()")
+        if len(self.outputs_info) < 1:
+            self.error("at least one output should be defined in info()")
 
-            # add object attributes
-            for name in self.all_info:
-                if not hasattr(self, name):
-                    setattr(self, name, self.all_info[name].value)
+        # add object attributes
+        for name in self.all_info:
+            if not hasattr(self, name):
+                setattr(self, name, self.all_info[name].value)
 
     def info(self):
         self.error("you must override info() method for your smart layer")
@@ -102,6 +116,9 @@ class SmartLayer(Layer):
         else:
             return self.all_info.get(name, None)
 
+    def check_input_type(self):
+        pass
+
     def forward_shape(self, override=False):
         pool = {}
         self.broadcast_shape("input", self.inputs_info, pool, False)
@@ -115,7 +132,9 @@ class SmartLayer(Layer):
         self.broadcast_shape("input", self.inputs_info, pool, False)
 
     def broadcast_shape(self, usage, info_dict, pool, override=False):
-        for name, info in info_dict:
+        for name, info in info_dict.items():
+            if not info.value:
+                continue  # extra parameter that is not offered
             shape = info.value.get_shape()
             shape_template = info.shape
             if len(shape) != len(shape_template):
@@ -156,6 +175,8 @@ class SmartLayer(Layer):
 
         def read_term(i):
             term = ""
+            while i < len(s) and s[i] == ' ':
+                i += 1
             while i < len(s) and s[i] not in {' ', '-', '+'}:
                 term += s[i]
                 i += 1
@@ -211,7 +232,7 @@ class SmartLayer(Layer):
             def __init__(self): pass
         agent = SmartTheanoAgent()
         for name, info in itertools.chain(self.inputs_info.items(), self.weights_info.items()):
-            var = diagram.get(info.value)
+            var = diagram.get(info.value) if info.value else None
             setattr(agent, name, var)
         for name, info in self.outputs_info.items():
             setattr(agent, name, None)
@@ -223,4 +244,4 @@ class SmartLayer(Layer):
 
     def get_theano_output_smart(self, n):
         self.error("you should either implement get_theano_output_smart() "
-                   "or get_theano_output() in your smart layer %s" % type(self))
+                   "or get_theano_output() in your smart layer %s" % self.__class__.__name__)

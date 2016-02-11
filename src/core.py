@@ -4,12 +4,12 @@
 """
 import math
 
-from layer.input import InputLayer
+from layer.basic.input import InputLayer
+from layer.basic.weight import WeightLayer
 from layer.layers import Layer
-from layer.weight import WeightLayer
 from loss.loss import Loss
 from updater.updaters import Updater
-from utils.debug import NNDebug
+from utility.debug import NNDebug
 from value.values import NNValue, NNScalar
 
 
@@ -139,7 +139,7 @@ class NNCore:
                 return visited_layers.setdefault(cur, override)
 
         global_override = True if len(origin_layers) > 0 else False
-        for layer in self.tps_list.reverse():
+        for layer in reversed(self.tps_list):
             dfs(layer, global_override)
 
     def backward_shape(self):
@@ -153,7 +153,7 @@ class NNCore:
                     dfs(child)
                 visited_layers.add(cur)
 
-        for layer in self.tps_list.reverse():
+        for layer in reversed(self.tps_list):
             dfs(layer)
 
     def topology_sort(self):
@@ -216,14 +216,14 @@ class NNCore:
         total_mem_size = 0
         maximum_mem_size = 4 * (1024 ** 3)
         value_set = set()
-        for _, layer in self.layers:
+        for layer in self.layers.values():
             for v in layer.get_outputs():
                 value_set.add(v)
             for v in layer.get_inputs():
                 value_set.add(v)
         for value in value_set:
             shape = value.get_shape()
-            elements_num = reduce(lambda (x, y): x*y, shape, 1)
+            elements_num = reduce(lambda x, y: x*y, shape, 1)
             total_mem_size += elements_num * value.get_element_size()
         if total_mem_size > maximum_mem_size * 0.9:
             scale = total_mem_size / (maximum_mem_size * 0.9)

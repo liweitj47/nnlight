@@ -1,3 +1,4 @@
+import importlib
 from layer.basic.input import InputLayer
 from layer.basic.logistic import LogisticLayer
 from layer.basic.lstm import LstmLayer
@@ -8,7 +9,7 @@ from layer.basic.softmax import SoftmaxLayer, SequencialSoftmaxLayer
 from layer.basic.tensor import LowRankTensorLayer
 from layer.basic.weight import WeightLayer
 from loss.basic.cross_entropy import CrossEntropyLoss, BinaryCrossEntropyLoss
-from loss.basic.cross_entropy import SequencialCrossEntropyLoss, SequencialBinaryCrossEntropyLoss
+from loss.basic.cross_entropy import SequentialCrossEntropyLoss, SequentialBinaryCrossEntropyLoss
 from loss.basic.max_margin import MaxMarginLoss
 from updater.updaters import SGDUpdater
 from utility.debug import NNDebug
@@ -38,8 +39,8 @@ cm = {
         MaxMarginLoss: ["max_margin_loss"],
         BinaryCrossEntropyLoss: ["binary_cross_entropy"],
         CrossEntropyLoss: ["cross_entropy"],
-        SequencialBinaryCrossEntropyLoss: ["sequencial_binary_cross_entropy"],
-        SequencialCrossEntropyLoss: ["sequencial_cross_entropy"],
+        SequentialBinaryCrossEntropyLoss: ["sequencial_binary_cross_entropy"],
+        SequentialCrossEntropyLoss: ["sequencial_cross_entropy"],
 
         # parameter updater
         SGDUpdater: ["sgd"]
@@ -94,3 +95,20 @@ class Constructor:
             if constructor is None:
                 NNDebug.error("[Constructor] invalid dtype for create_value(): '%s'" % dtype)
             return constructor(shape, father)
+
+    @staticmethod
+    def register_type(name, classpath):
+        if name in constructor_map:
+            NNDebug.error("[Constructor] typename '%s' already defined" % name)
+        pos = classpath.rfind(".")
+        if pos <= 0:
+            NNDebug.error("[Constructor] invalid classpath '%s'" % classpath)
+        modulepath, classname = classpath[:pos], classpath[pos+1:]
+        try:
+            module = importlib.import_module(modulepath)
+            classobj = getattr(module, classname, None)
+            if not classobj:
+                NNDebug.error("[Constructor] class '%s' not found in module %s" % (classname, modulepath))
+            constructor_map[name] = classobj
+        except ImportError as e:
+            NNDebug.error("[Constructor] import error: %s" % e)

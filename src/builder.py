@@ -143,9 +143,12 @@ class NNBuilder:
         for item in d.get("layer", []):
             name = item.pop("name", "")
             self.check_name(name)
-            ltype = item.pop("type")
+            ltype = item.pop("type", None)
             if not ltype:
                 self.error("missing type field in layer '%s'" % name)
+            classpath = item.pop("classpath", None)
+            if classpath:
+                Constructor.register_type(ltype, classpath)
             self.make_layer(name, ltype, item)
 
         # losses
@@ -155,6 +158,9 @@ class NNBuilder:
             ltype = item.pop("type", None)
             if not ltype:
                 self.error("missing type field in loss '%s'" % name)
+            classpath = item.pop("classpath", None)
+            if classpath:
+                Constructor.register_type(ltype, classpath)
             self.make_loss(name, ltype, item)
 
         # training

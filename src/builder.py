@@ -141,24 +141,20 @@ class NNBuilder:
 
         # layers
         for item in d.get("layer", []):
-            name = item.get("name", "")
+            name = item.pop("name", "")
             self.check_name(name)
-            ltype = item.get("type")
+            ltype = item.pop("type")
             if not ltype:
                 self.error("missing type field in layer '%s'" % name)
-            item.pop("name")
-            item.pop("type")
             self.make_layer(name, ltype, item)
 
         # losses
         for item in d.get("loss", []):
-            name = item.get("name", "")
+            name = item.pop("name", "")
             self.check_name(name)
-            ltype = item.get("type", None)
+            ltype = item.pop("type", None)
             if not ltype:
                 self.error("missing type field in loss '%s'" % name)
-            item.pop("name")
-            item.pop("type")
             self.make_loss(name, ltype, item)
 
         # training
@@ -172,8 +168,8 @@ class NNBuilder:
                    "the optimizing target should be a Loss instance")
         self.core.set_optimizing_target(optimizing_target)
         self.make_update(
-            item.get("method", "sgd"),
-            item.get("learning_rate", 0.1),
+            item.pop("method", "sgd"),
+            item.pop("learning_rate", 0.1),
             item
         )
         output_infos = item.get("outputs", [])
@@ -254,10 +250,6 @@ class NNBuilder:
         constructor = Constructor.get_constructor(method)
         if not constructor:
             self.error("unknown update type '%s'" % method)
-        if "method" in item:
-            item.pop("method")
-        if "learning_rate" in item:
-            item.pop("learning_rate")
         updater = constructor(learning_rate, item, self.core)
         self.check(isinstance(updater, Updater), "'%s' update should be Updater instance" % method)
         self.core.set_updater(updater)

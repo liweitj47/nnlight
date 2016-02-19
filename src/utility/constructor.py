@@ -15,7 +15,7 @@ from updater.updaters import SGDUpdater
 from utility.debug import NNDebug
 from value.values import NNScalarInt64, NNArrayFloat32, NNScalarFloat32
 
-cm = {
+default_cm = {
         # value
         NNScalarInt64: ["int64", "int"],
         NNScalarFloat32: ["float32", "float"],
@@ -48,10 +48,7 @@ cm = {
 
 
 default_constructor_map = {}
-for constr, datatypes in cm.items():
-    for datatype in datatypes:
-        default_constructor_map[datatype] = constr
-constructor_map = dict(default_constructor_map.items())
+constructor_map = {}
 
 
 class Constructor:
@@ -60,8 +57,18 @@ class Constructor:
         pass
 
     @staticmethod
-    def get_default_constructor_map():
-        return default_constructor_map
+    def load_default_constructor_map(reversed_cm):
+        default_constructor_map.clear()
+        for constr, datatypes in reversed_cm.items():
+            for datatype in datatypes:
+                default_constructor_map[datatype] = constr
+
+    @staticmethod
+    def load_constructor_map(reversed_cm):
+        constructor_map.clear()
+        for constr, datatypes in reversed_cm.items():
+            for datatype in datatypes:
+                constructor_map[datatype] = constr
 
     @staticmethod
     def get_default_constructor(name):
@@ -97,18 +104,32 @@ class Constructor:
             return constructor(shape, father)
 
     @staticmethod
-    def register_type(name, classpath):
-        if name in constructor_map:
-            NNDebug.error("[Constructor] typename '%s' already defined" % name)
+    def load_module_from_path(modulepath):
+        try:
+            module = importlib.import_module(modulepath)
+            return module
+        except ImportError as e:
+            NNDebug.error("[Constructor] import error: %s" % e)
+
+    @staticmethod
+    def load_constructor_from_path(classpath):
         pos = classpath.rfind(".")
         if pos <= 0:
             NNDebug.error("[Constructor] invalid classpath '%s'" % classpath)
         modulepath, classname = classpath[:pos], classpath[pos+1:]
-        try:
-            module = importlib.import_module(modulepath)
-            classobj = getattr(module, classname, None)
-            if not classobj:
-                NNDebug.error("[Constructor] class '%s' not found in module %s" % (classname, modulepath))
-            constructor_map[name] = classobj
-        except ImportError as e:
-            NNDebug.error("[Constructor] import error: %s" % e)
+        module = Constructor.load_module_from_path(modulepath)
+        classobj = getattr(module, classname, None)
+        if not classobj:
+            NNDebug.error("[Constructor] class '%s' not found in module %s" % (classname, modulepath))
+        return classobj
+
+    @staticmethod
+    def register_type(name, classpath):
+        if name in constructor_map:
+            NNDebug.error("[Constructor] typename '%s' already defined" % name)
+        classobj = Constructor.load_constructor_from_path(classpath)
+        constructor_map[name] = classobj
+
+
+Constructor.load_default_constructor_map(default_cm)
+Constructor.load_constructor_map(default_cm)

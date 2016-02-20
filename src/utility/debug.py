@@ -2,11 +2,6 @@
 """
 
 """
-import random
-import string
-import theano
-import numpy
-import math
 
 
 class NNDebug:
@@ -18,7 +13,7 @@ class NNDebug:
 
     @staticmethod
     def error(msg):
-        raise Exception(msg)
+        raise NNException(msg)
 
     @staticmethod
     def warning(text):
@@ -27,4 +22,8 @@ class NNDebug:
     @staticmethod
     def check(cond, msg):
         if not cond:
-            raise Exception(msg)
+            raise NNException(msg)
+
+
+class NNException(Exception):
+    pass

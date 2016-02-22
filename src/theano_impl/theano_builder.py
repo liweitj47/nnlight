@@ -71,7 +71,7 @@ class TheanoBackendBuilder(BackendBuilder):
         theano_updates = updater.get_theano_updates(diagram, self.core)
 
         theano_outputs = []
-        for output in self.core.output_target.values():
+        for output in self.core.output_target:
             theano_outputs.append(diagram.get(output))
 
         theano_train_func = theano.function(

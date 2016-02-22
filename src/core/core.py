@@ -25,8 +25,10 @@ class NNCore:
         #  dict for to-be-trained weights
         self.to_learn = {}
 
-        #  list of NNValues for output information
+        #  dict of NNValues for output information
         self.output_target = []
+        #  we want outputs be ordered so use another dict for names
+        self.output_name_mapping = {}
 
         self.updater = None
         self.optimizing_target = None
@@ -82,11 +84,14 @@ class NNCore:
         self.losses[name] = l
         self.layers[name] = l  # loss is a special layer
 
-    def add_output(self, obj):
+    def add_output(self, name, obj):
         self.program_check(isinstance(obj, NNValue),
                            "NNCore.add_output() need pass a NNValue object")
-        if obj not in self.output_target:
-            self.output_target.append(obj)
+        self.check(obj not in self.output_name_mapping,
+                   "duplicate output info '%s', maybe"
+                   " it's alias already exists" % name)
+        self.output_target.append(obj)
+        self.output_name_mapping[obj] = name
 
     def set_optimizing_target(self, t):
         self.program_check(isinstance(t, NNScalar),

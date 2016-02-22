@@ -2,6 +2,7 @@
 """
 
 """
+import re
 from core import NNCore
 from layer.layers import Layer
 from loss.loss import Loss
@@ -22,6 +23,9 @@ class NNBuilder:
         # supporting datatypes
         self.valid_input_dtypes = {"float32", "int64"}
         self.valid_weight_dtypes = {"float32"}
+
+        # support name pattern
+        self.name_pattern = re.compile("[a-zA-Z_][a-zA-Z0-9_]*")
 
         # internal states
         self.core = NNCore()
@@ -290,6 +294,8 @@ class NNBuilder:
 
     def check_name(self, s):
         if (not isinstance(s, str)) or s == "":
+            self.error("invalid name '%s'" % s)
+        elif not self.name_pattern.match(s):
             self.error("invalid name '%s'" % s)
         elif s in self.names:
             self.error("duplicate definition '%s'" % s)

@@ -6,22 +6,50 @@ from core import NNCore
 from layer.layers import Layer
 from loss.loss import Loss
 from network import Network
+from backend import BackendBuilder
 from theano_impl.theano_builder import TheanoBackendBuilder
+from computation_on_java_impl.computation_on_java_builder import ComputationOnJavaBackendBuilder
 from updater.updaters import Updater
 from utility.configparser import ConfigParser
 from utility.constructor import Constructor
-from utility.debug import NNDebug
+from utility.debug import NNDebug, NNException
 from value.values import NNValue
 
 
 class NNBuilder:
 
-    def __init__(self):
+    def __init__(self, backend="theano"):
+        # supporting datatypes
         self.valid_input_dtypes = {"float32", "int64"}
         self.valid_weight_dtypes = {"float32"}
+
+        # internal states
         self.core = NNCore()
         self.names = set()
         self.values = {}
+
+        # backend builder
+        backend = backend.lower()
+        if backend == "theano":
+            self.backend_builder = TheanoBackendBuilder(self.core)
+        elif backend == "computation_on_java":
+            self.backend_builder = ComputationOnJavaBackendBuilder(self.core)
+        else:
+            try:
+                constructor = Constructor.load_constructor_from_path(backend)
+                self.check(isinstance(constructor, BackendBuilder),
+                           "invalid backend builder '%s'" % backend)
+                self.backend_builder = constructor(self.core)
+            except NNException:
+                self.error("invalid backend builder '%s'" % backend)
+
+        # constructor map reassign
+        cm = self.backend_builder.get_constructor_map()
+        if cm is not None:
+            self.check(isinstance(cm, dict),
+                       "%s.get_constructor_map() should return a "
+                       "Constructor:Alias dict" % self.backend_builder.__class__.__name__)
+            Constructor.load_constructor_map(cm)
 
     @staticmethod
     def error(s):
@@ -42,8 +70,8 @@ class NNBuilder:
 
         :param data_dict:
             dict, the key is the network input name defined by
-                the configuration, and the value is the
-                numpy.ndarray fed to the network's input
+                the configuration, and the value is the ndarray
+                fed to the network's input
 
         :return: the Network object
         """
@@ -185,7 +213,7 @@ class NNBuilder:
             output = self.eval(output_info)
             self.check(isinstance(output, NNValue),
                        "the output value '%s' should be a NNValue instance")
-            self.core.add_output(output)
+            self.core.add_output(output_info, output)
 
     def eval(self, v):
         if isinstance(v, str):
@@ -272,7 +300,6 @@ class NNBuilder:
 
     def backend_build(self):
         self.core.check_validity()
-        builder = TheanoBackendBuilder(self.core)
-        network = builder.build()
+        network = self.backend_builder.build()
         self.check(isinstance(network, Network), "backend builder failed")
         return network

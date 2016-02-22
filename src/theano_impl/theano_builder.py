@@ -4,17 +4,17 @@
 """
 import numpy
 import theano
-
-from utility.debug import NNDebug
 from theano import tensor
+from core.backend import BackendBuilder
 from theano_network import TheanoNetwork
+from utility.debug import NNDebug
 from value.values import NNValue
 
 
-class TheanoBackendBuilder:
+class TheanoBackendBuilder(BackendBuilder):
 
     def __init__(self, core):
-        self.core = core
+        BackendBuilder.__init__(self, core)
         self.maximum_sample_size = -1
         self.tps_list = []
 
@@ -66,11 +66,12 @@ class TheanoBackendBuilder:
 
         updater = self.core.updater
         if not hasattr(updater, "get_theano_updates"):
-            self.error("missing get_theano_updates()' method for %s instance to support Theano" % updater.__class__.__name__)
+            self.error("missing get_theano_updates()' method for %s instance to "
+                       "support Theano" % updater.__class__.__name__)
         theano_updates = updater.get_theano_updates(diagram, self.core)
 
         theano_outputs = []
-        for output in self.core.output_target:
+        for output in self.core.output_target.values():
             theano_outputs.append(diagram.get(output))
 
         theano_train_func = theano.function(
@@ -121,8 +122,8 @@ class TheanoDiagram:
                     self.mapping[value] = output
                 result = self.mapping[value]
                 NNDebug.check(isinstance(result, object),
-                           "[builder] invalid outputs for implementation of"
-                           " %s.get_theano_output()" % value.get_father().__class__.__name__)
+                              "[builder] invalid outputs for implementation of"
+                              " %s.get_theano_output()" % value.get_father().__class__.__name__)
                 return result
 
     def get_shared(self, value, maximum_sample_size=None):

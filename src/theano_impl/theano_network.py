@@ -4,9 +4,9 @@
 """
 import math
 import numpy
+from core.network import Network
 from layer.basic.input import InputLayer
 from layer.basic.weight import WeightLayer
-from network import Network
 
 
 class TheanoNetwork(Network):

@@ -1,4 +1,4 @@
-from layer.smart_layer import Layer
+from layer.layers import Layer
 
 
 class Loss(Layer):

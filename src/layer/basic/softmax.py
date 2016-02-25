@@ -1,9 +1,10 @@
 import theano
 from theano import tensor
-from layer.smart_layer import SmartLayer
+
+from theano_impl.theano_smart_layer import TheanoSmartLayer
 
 
-class SoftmaxLayer(SmartLayer):
+class SoftmaxLayer(TheanoSmartLayer):
 
     def info(self):
         return [
@@ -18,7 +19,7 @@ class SoftmaxLayer(SmartLayer):
         )
 
 
-class SequencialSoftmaxLayer(SmartLayer):
+class SequencialSoftmaxLayer(TheanoSmartLayer):
 
     def info(self):
         return [

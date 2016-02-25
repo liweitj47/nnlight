@@ -1,9 +1,10 @@
 from theano import tensor
+
 from loss.loss import Loss
-from layer.smart_layer import SmartLayer
+from theano_impl.theano_smart_layer import TheanoSmartLayer
 
 
-class MaxMarginLoss(Loss, SmartLayer):
+class MaxMarginLoss(Loss, TheanoSmartLayer):
 
     def info(self):
         return [

@@ -1,9 +1,10 @@
 import theano
 from theano import tensor
-from layer.smart_layer import SmartLayer
+
+from theano_impl.theano_smart_layer import TheanoSmartLayer
 
 
-class SentenceConvolutionLayer(SmartLayer):
+class SentenceConvolutionLayer(TheanoSmartLayer):
 
     def info(self):
         return [
@@ -21,7 +22,7 @@ class SentenceConvolutionLayer(SmartLayer):
             filter_shape=[filter_shape[0], 1, filter_shape[1], filter_shape[2]]
         )
         window = filter_shape[2]
-        mask = n.mask[:, :1 - window]
+        mask = n.mask[:, window-1:]
         n.output = theano.tensor.nnet.sigmoid(
             theano.tensor.sum(conv, axis=2)
         ).dimshuffle(0, 2, 1) * mask.dimshuffle(0, 1, 'x')

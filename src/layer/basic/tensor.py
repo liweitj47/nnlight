@@ -1,9 +1,9 @@
-import theano
 from theano import tensor
-from layer.smart_layer import SmartLayer
+
+from theano_impl.theano_smart_layer import TheanoSmartLayer
 
 
-class LowRankTensorLayer(SmartLayer):
+class LowRankTensorLayer(TheanoSmartLayer):
 
     def info(self):
         return [

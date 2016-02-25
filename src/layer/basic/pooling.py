@@ -1,9 +1,10 @@
 import theano
 from theano import tensor
-from layer.smart_layer import SmartLayer
+
+from theano_impl.theano_smart_layer import TheanoSmartLayer
 
 
-class MaxPoolingWithTimeLayer(SmartLayer):
+class MaxPoolingWithTimeLayer(TheanoSmartLayer):
 
     def info(self):
         return [

@@ -1,13 +1,14 @@
 import theano
 from theano import tensor
+
 from loss.loss import Loss
-from layer.smart_layer import SmartLayer
+from theano_impl.theano_smart_layer import TheanoSmartLayer
 
 
-class BinaryCrossEntropyLoss(Loss, SmartLayer):
+class BinaryCrossEntropyLoss(Loss, TheanoSmartLayer):
 
     def __init__(self, name, params, core):
-        SmartLayer.__init__(self, name, params, core)
+        TheanoSmartLayer.__init__(self, name, params, core)  # this is necessary because multi-inheritance
 
     def info(self):
         return [
@@ -23,10 +24,10 @@ class BinaryCrossEntropyLoss(Loss, SmartLayer):
         )
 
 
-class SequencialBinaryCrossEntropyLoss(Loss, SmartLayer):
+class SequentialBinaryCrossEntropyLoss(Loss, TheanoSmartLayer):
 
     def __init__(self, name, params, core):
-        SmartLayer.__init__(self, name, params, core)
+        TheanoSmartLayer.__init__(self, name, params, core)
 
     def info(self):
         return [
@@ -41,10 +42,10 @@ class SequencialBinaryCrossEntropyLoss(Loss, SmartLayer):
         )
 
 
-class CrossEntropyLoss(Loss, SmartLayer):
+class CrossEntropyLoss(Loss, TheanoSmartLayer):
 
     def __init__(self, name, params, core):
-        SmartLayer.__init__(self, name, params, core)
+        TheanoSmartLayer.__init__(self, name, params, core)
 
     def info(self):
         return [
@@ -60,10 +61,10 @@ class CrossEntropyLoss(Loss, SmartLayer):
         )
 
 
-class SequencialCrossEntropyLoss(Loss, SmartLayer):
+class SequentialCrossEntropyLoss(Loss, TheanoSmartLayer):
 
     def __init__(self, name, params, core):
-        SmartLayer.__init__(self, name, params, core)
+        TheanoSmartLayer.__init__(self, name, params, core)
 
     def info(self):
         return [

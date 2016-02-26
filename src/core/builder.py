@@ -33,7 +33,6 @@ class NNBuilder:
         self.values = {}
 
         # backend builder
-        backend = backend.lower()
         if backend == "theano":
             self.backend_builder = TheanoBackendBuilder(self.core)
         elif backend == "computation_on_java":

@@ -103,22 +103,23 @@ class NNCore:
                            "NNCore.set_updater() need pass a Updater object")
         self.updater = upd
 
-    def check_validity(self, origin_layers=None):
+    def check_validity(self, modified_layers=None):
         """
         check the structure validity and type safety for the network diagram, includes:
         1) input content validity
         2) shape consistency
         3) no structure cycling
 
-        :param origin_layers: if the method is called on a data changing operation (set_data() for input or weight,
-                            it should point out which layers are changed and shape broadcasting will begin from them.
+        :param modified_layers: set type, if the method is called on a data changing operation
+                                (set_data() for input or weight, it should point out which layers
+                                are changed and shape broadcasting will begin from them.
         """
-        if not origin_layers:
+        if not modified_layers:
             origin_layers = set()
 
         self.topology_sort()
         self.check_inputs()
-        self.forward_shape(origin_layers)
+        self.forward_shape(modified_layers)
         self.backward_shape()
         self.check_unknown_shape()
 

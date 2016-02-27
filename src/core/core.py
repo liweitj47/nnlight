@@ -54,15 +54,15 @@ class NNCore:
     def add_layer(self, name, l):
         self.program_check(isinstance(l, Layer),
                            "NNCore.add_layer() need pass a Layer object")
-        self.program_check(name not in self.layers,
-                           "Layer '%s' already defined in NNCore" % name)
+        self.check(name not in self.layers,
+                   "Layer '%s' already defined in NNCore" % name)
         self.layers[name] = l
 
-    def add_weight(self, name, w, to_learn):
+    def add_weight(self, name, w, to_learn=True):
         self.program_check(isinstance(w, WeightLayer),
                            "NNCore.add_weight() need pass a WeightLayer object")
-        self.program_check(name not in self.layers,
-                           "Layer '%s' already defined in NNCore" % name)
+        self.check(name not in self.layers,
+                   "Layer '%s' already defined in NNCore" % name)
         self.weights[name] = w
         self.layers[name] = w  # weight is a special layer
         if to_learn:
@@ -71,16 +71,16 @@ class NNCore:
     def add_input(self, name, i):
         self.program_check(isinstance(i, InputLayer),
                            "NNCore.add_input() need pass an InputLayer object")
-        self.program_check(name not in self.layers,
-                           "Layer '%s' already defined in NNCore" % name)
+        self.check(name not in self.layers,
+                   "Layer '%s' already defined in NNCore" % name)
         self.inputs[name] = i
         self.layers[name] = i  # input is a special layer
 
     def add_loss(self, name, l):
         self.program_check(isinstance(l, Loss),
                            "NNCore.add_loss() need pass a Loss object")
-        self.program_check(name not in self.layers,
-                           "Layer '%s' already defined in NNCore" % name)
+        self.check(name not in self.layers,
+                   "Layer '%s' already defined in NNCore" % name)
         self.losses[name] = l
         self.layers[name] = l  # loss is a special layer
 

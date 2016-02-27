@@ -119,7 +119,10 @@ class SmartLayer(Layer):
         if name is None:
             return self.get_outputs()[0]
         else:
-            return self.all_info.get(name, None).value
+            info = self.all_info.get(name, None)
+            if not info:
+                self.error("undefined sub-value '%s.%s'" % (self.name, name))
+            return info.value
 
     def check_input_type(self):
         pass

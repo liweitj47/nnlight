@@ -232,7 +232,8 @@ class NNBuilder:
                 sub = None if len(names) == 1 else names[1]
                 value = layer.get_value(name=sub)
                 self.check(isinstance(value, NNValue),
-                           "%s.get_value() should return NNValue object for '%s'" % (layer.__class__.__name__, v))
+                           "%s.get_value() should return NNValue object for '%s', "
+                           "maybe '%s' is not defined." % (layer.__class__.__name__, v, v))
                 return value
         elif isinstance(v, int):
             return v

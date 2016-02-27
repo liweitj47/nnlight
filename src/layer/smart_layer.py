@@ -153,6 +153,9 @@ class SmartLayer(Layer):
                     if res > 0:
                         ti = res
                     elif ti in pool:
+                        if ti in self.params and self.params[ti] == pool[ti]:
+                            self.error("inconsistent value for '%s' 's %dth element '%s' defined by info(), "
+                                       "expected to be %d but actually %d" % (name, i, ti, self.params[ti], pool[ti]))
                         ti = pool[ti]
                     elif ti in self.params:
                         value = self.params[ti]
@@ -177,6 +180,11 @@ class SmartLayer(Layer):
             info.value.set_shape(shape)
 
     def try_parse_expression(self, s, pool):
+        """
+        :param s: input expression
+        :param pool: name-value dict
+        :return: positive integer if successful, else -1; throw exception for invalid format
+        """
         s = s.strip()
         terms = []
         ops = []
@@ -208,8 +216,9 @@ class SmartLayer(Layer):
             try:
                 result = int(term)
             except ValueError:
-                if not (term in pool or term in self.params):
-                    self.error("unknown shape element '%s' of '%s' defined in info()" % (term, s))
+                if term not in pool and term not in self.params:
+                    # self.error("unknown shape element '%s' in '%s' defined in info()" % (term, s))
+                    return None
                 result = pool[term] if term in pool else self.params[term]
             self.check(isinstance(result, int),
                        "'%s' expected to be integer defined in info()" % term)
@@ -227,10 +236,18 @@ class SmartLayer(Layer):
         if len(terms) < 2:
             return -1
         else:
-            res = eval_term(terms[0])
+            accu = eval_term(terms[0])
+            if accu is None:
+                return -1
             for next_term, next_op in zip(terms[1:], ops):
                 if next_op == '-':
-                    res -= eval_term(next_term)
+                    res = eval_term(next_term)
+                    if res is None:
+                        return -1
+                    accu -= res
                 elif next_op == '+':
-                    res += eval_term(next_term)
-            return res
+                    res = eval_term(next_term)
+                    if res is None:
+                        return -1
+                    accu += res
+            return accu

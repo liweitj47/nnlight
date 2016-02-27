@@ -51,8 +51,8 @@ class WeightLayer(LayerWithData):
         pass
 
     def forward_shape(self, override=False):
-        if not self.data:
-            return  # no more information to forward
+        if self.data is None:
+            return  # no more information to forward, this is not the case when input layer is reset with new data
         shape0 = [int(x) for x in self.data.shape]  # ensure integers be int type
         shape1 = self.get_value().get_shape()
         if len(shape0) != len(shape1):
@@ -70,7 +70,7 @@ class WeightLayer(LayerWithData):
         self.get_value().set_shape(shape1)
 
     def backward_shape(self, override=False):
-        if not self.data:
+        if self.data is None:
             return  # no more information to backward
         shape0 = [int(x) for x in self.data.shape]  # ensure integers be int type
         shape1 = self.get_value().get_shape()
@@ -100,7 +100,7 @@ class WeightLayer(LayerWithData):
             self.error("dimension %d not supported for weight '%s'" % (dims, self.name))
 
     def get_theano_shared(self, maximum_sample_size):
-        if not self.data:
+        if self.data is None:
             self.data = numpy.zeros(self.get_shape(), dtype="float32")
             if self.init_method:
                 high = 4.0 * numpy.sqrt(6.0 / sum(self.get_shape()))

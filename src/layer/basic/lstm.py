@@ -29,7 +29,7 @@ class LstmLayer(TheanoSmartLayer):
                 n.W_c
             )
         )  # samples * hidden
-        x_t = n.x.dimshuffle(1, 0, 2)
+        x_t = n.x.dimshuffle(2, 0, 1)
         mask_t = n.mask.dimshuffle(1, 0)
 
         def _step(vec, mask, h, c):

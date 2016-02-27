@@ -115,7 +115,7 @@ class NNCore:
                                 are changed and shape broadcasting will begin from them.
         """
         if not modified_layers:
-            origin_layers = set()
+            modified_layers = set()
 
         self.topology_sort()
         self.check_inputs()
@@ -210,11 +210,11 @@ class NNCore:
     def check_unknown_shape(self):
         for name in self.layers:
             l = self.layers[name]
-            values = l.get_inputs() + l.get_outputs()
+            values = l.get_outputs()
             for v in values:
                 shape = v.get_shape()
                 self.check(all([x > 0 for x in shape]),
-                           "cannot determine explicit shape for layer '%s': %s"
+                           "cannot determine explicit shape for layer '%s' 's output: %s"
                            % (l.name, ['?' if d <= 0 else d for d in shape]))
 
     def estimate_maximum_sample_size(self):

@@ -214,7 +214,7 @@ class NNCore:
             for v in values:
                 shape = v.get_shape()
                 self.check(all([x > 0 for x in shape]),
-                           "cannot determine explicit shape for layer '%s': currently %s"
+                           "cannot determine explicit shape for layer '%s': %s"
                            % (l.name, ['?' if d <= 0 else d for d in shape]))
 
     def estimate_maximum_sample_size(self):

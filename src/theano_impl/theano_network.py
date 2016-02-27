@@ -39,7 +39,7 @@ class TheanoNetwork(Network):
             batch_collector = self.__default_batch_collector
 
         result = None
-        block_num = int(math.ceil(self.total_sample_size / self.maximum_sample_size))
+        block_num = int(math.ceil(self.total_sample_size / float(self.maximum_sample_size)))
 
         for b in range(block_num):
             batch_num = 0
@@ -49,7 +49,7 @@ class TheanoNetwork(Network):
                 for inp in self.inputs:
                     block = inp.get_data()[block_beg, block_end]
                     inp.set_theano_shared(block)
-                    batch_num = int(math.ceil(block.shape[0] / batch_size))
+                    batch_num = int(math.ceil(block.shape[0] / float(batch_size)))
 
             for batch in range(batch_num):
                 batch_begin = batch * batch_size
@@ -74,7 +74,7 @@ class TheanoNetwork(Network):
             batch_collector = self.__default_batch_collector
 
         result = None
-        block_num = int(math.ceil(self.total_sample_size / self.maximum_sample_size))
+        block_num = int(math.ceil(self.total_sample_size / float(self.maximum_sample_size)))
 
         for i in range(iters):
             result = None

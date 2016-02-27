@@ -22,6 +22,7 @@ class SmartLayer(Layer):
         self.weights_info = {}
         self.outputs_info = {}
         self.all_info = {}
+        self.shape_template_dict = {}
 
         #  inputs and outputs NNValue
         self.inputs = []
@@ -99,6 +100,8 @@ class SmartLayer(Layer):
         for name in self.all_info:
             if not hasattr(self, name):
                 setattr(self, name, self.all_info[name].value)
+            else:
+                self.error("name '%s' already used by SmartLayer internals" % name)
 
     def info(self):
         self.error("you must override info() method for your smart layer")
@@ -114,7 +117,7 @@ class SmartLayer(Layer):
         if name is None:
             return self.get_outputs()[0]
         else:
-            return self.all_info.get(name, None)
+            return self.all_info.get(name, None).value
 
     def check_input_type(self):
         pass
@@ -124,12 +127,14 @@ class SmartLayer(Layer):
         self.broadcast_shape("input", self.inputs_info, pool, False)
         self.broadcast_shape("weight", self.weights_info, pool, False)
         self.broadcast_shape("output", self.outputs_info, pool, override)
+        self.shape_template_dict = pool
 
     def backward_shape(self, override=False):
         pool = {}
         self.broadcast_shape("output", self.outputs_info, pool, False)
         self.broadcast_shape("weight", self.weights_info, pool, False)
         self.broadcast_shape("input", self.inputs_info, pool, False)
+        self.shape_template_dict = pool
 
     def broadcast_shape(self, usage, info_dict, pool, override=False):
         for name, info in info_dict.items():
@@ -148,10 +153,12 @@ class SmartLayer(Layer):
                     elif ti in pool:
                         ti = pool[ti]
                     elif ti in self.params:
-                        self.check(isinstance(self.params[ti], int),
+                        value = self.params[ti]
+                        self.check(isinstance(value, int),
                                    "'%s' 's %dth element '%s' defined by info() expected "
                                    "to be an integer" % (name, i, ti))
-                        ti = self.params[ti]
+                        pool[ti] = value
+                        ti = value
                     else:
                         if shape[i] > 0:
                             pool[ti] = si

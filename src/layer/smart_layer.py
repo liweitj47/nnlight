@@ -67,6 +67,7 @@ class SmartLayer(Layer):
                         registry_name = self.name + "." + name
                         weight = constructor(registry_name, initial_shape, dtype, "random")
                         core.add_weight(registry_name, weight)
+                        value = weight.get_value()
                 elif usage == "output":
                     value = Constructor.create_value(self, initial_shape, dtype)
                 else:
@@ -156,7 +157,7 @@ class SmartLayer(Layer):
                     if res > 0:
                         ti = res
                     elif ti in pool:
-                        if ti in self.params and self.params[ti] == pool[ti]:
+                        if ti in self.params and self.params[ti] != pool[ti]:
                             self.error("inconsistent value for '%s' 's %dth element '%s' defined by info(), "
                                        "expected to be %d but actually %d" % (name, i, ti, self.params[ti], pool[ti]))
                         ti = pool[ti]

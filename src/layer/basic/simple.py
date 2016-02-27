@@ -9,8 +9,9 @@ class SimpleLayer(TheanoSmartLayer):
     def info(self):
         return [
             ("x", "input", ["samples", "features"]),
-            ("W", "weight", ["features", "outputs"]),
-            ("y", "output", ["samples", "outputs"])
+            ("W", "weight", ["features", "hidden"]),
+            ("b", "weight", [], "extra"),
+            ("y", "output", ["samples", "hidden"])
         ]
 
     def get_theano_output_smart(self, n):

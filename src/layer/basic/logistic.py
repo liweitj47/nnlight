@@ -10,10 +10,11 @@ class LogisticLayer(TheanoSmartLayer):
         return [
             ("x", "input", ["samples", "features"]),
             ("W", "weight", ["features"]),
+            ("b", "weight", [], "extra"),
             ("y", "output", ["samples"])
         ]
 
     def get_theano_output_smart(self, n):
         n.y = theano.tensor.nnet.sigmoid(
-                theano.tensor.dot(n.x, n.W)
+                theano.tensor.dot(n.x, n.W) + (n.b if n.b else 0)
         )

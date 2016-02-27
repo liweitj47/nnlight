@@ -58,16 +58,17 @@ class SmartLayer(Layer):
             if value is None:
                 from utility.constructor import Constructor
                 if usage == "weight":
-                    constructor = Constructor.get_constructor("weight")
-                    if not constructor:
-                        self.error("weight layer constructor missed")
-                    registry_name = self.name + "." + name
-                    weight = constructor(registry_name, initial_shape, dtype, "random")
-                    core.add_weight(registry_name, weight)
+                    if extra:
+                        pass
+                    else:
+                        constructor = Constructor.get_constructor("weight")
+                        if not constructor:
+                            self.error("weight layer constructor missed")
+                        registry_name = self.name + "." + name
+                        weight = constructor(registry_name, initial_shape, dtype, "random")
+                        core.add_weight(registry_name, weight)
                 elif usage == "output":
                     value = Constructor.create_value(self, initial_shape, dtype)
-                elif extra:
-                    pass
                 else:
                     self.error("missing input param '%s' defined in info() for '%s'" % (name, self.name))
             self.check(isinstance(value, NNValue) or extra,
@@ -86,7 +87,8 @@ class SmartLayer(Layer):
             elif usage == "weight":
                 self.all_info[name] = info_obj
                 self.weights_info[name] = info_obj
-                self.inputs.append(value)  # weight is seen as an input
+                if value:
+                    self.inputs.append(value)  # weight is seen as an input
             else:
                 self.error("invalid usage string for param '%s' defined in info(),"
                            " (input|output|weight)" % usage)

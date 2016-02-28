@@ -65,7 +65,7 @@ class Constructor:
 
     @staticmethod
     def load_constructor_map(reversed_cm):
-        constructor_map.clear()
+        # constructor_map.clear()
         for constr, datatypes in reversed_cm.items():
             for datatype in datatypes:
                 constructor_map[datatype] = constr

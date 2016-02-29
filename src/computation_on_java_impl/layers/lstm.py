@@ -52,8 +52,8 @@ class LstmLayer(LstmLayerBase):
         for alias, value in table:
             typ, name = binder.get(self.x)
             code.field(typ, alias, name)
-        code.field("int", "hidden", self.shape_template_dict["hidden"])
-        code.field("int", "features", self.shape_template_dict["features"])
+        code.field("int", "hidden", val=self.shape_template_dict["hidden"])
+        code.field("int", "features", val=self.shape_template_dict["features"])
 
     def per_sample_code(self, code, binder):
         code.begin_for("int i=0; i<hidden; i++")  # initial cell
@@ -63,7 +63,7 @@ class LstmLayer(LstmLayerBase):
         code.begin_for("int t=0; t<max_length; t++")  # recurrent
         self.per_step_code(code, binder)
         code.end()
-        code.begin("int i=0; i<hidden; i++")  # copy to 'last'
+        code.begin_for("int i=0; i<hidden; i++")  # copy to 'last'
         code.assignment("%s[s][i]" % binder.get_name(self.last), "h[s][max_length-1][i]")
         code.end()
 
@@ -72,9 +72,21 @@ class LstmLayer(LstmLayerBase):
         # mask = 1
         code.begin_if("mask[s][t] > 0")
         self.union_code(code)  # copy x and state into buffer
-        self.mut_code(binder.get_name(self.W_i), "buf", binder.get_name(self.b_i), "input_gate", code)  # gate computing
-        self.mut_code(binder.get_name(self.W_o), "buf", binder.get_name(self.b_o), "output_gate", code)
-        self.mut_code(binder.get_name(self.W_f), "buf", binder.get_name(self.b_f), "forget_gate", code)
+        self.mut_code(binder.get_name(self.W_i),  # gate computing
+                      "buf",
+                      binder.get_name(self.b_i) if self.b_i else None,
+                      "input_gate",
+                      code)
+        self.mut_code(binder.get_name(self.W_o),
+                      "buf",
+                      binder.get_name(self.b_o) if self.b_o else None,
+                      "output_gate",
+                      code)
+        self.mut_code(binder.get_name(self.W_f),
+                      "buf",
+                      binder.get_name(self.b_f) if self.b_f else None,
+                      "forget_gate",
+                      code)
         self.cell_code(code, binder)  # new cell computing
         code.end()
         # mask = 0
@@ -117,7 +129,12 @@ class LstmLayer(LstmLayerBase):
         code.end()
 
     def cell_code(self, code, binder):
-        self.mut_code(binder.get_name(self.W_c), "buf", binder.get_name(self.b_c), "h[s][t]", tanh=True)
+        self.mut_code(binder.get_name(self.W_c),
+                      "buf",
+                      binder.get_name(self.b_c) if self.b_c else None,
+                      "h[s][t]",
+                      code,
+                      tanh=True)
         code.begin_for("int i=0; i<hidden; i++")
         code.assignment("cell[i]", "input_gate[i] * h[s][t][i] + forget_gate[i] * cell[i]")
         code.field("double", "exp2_tmp_1", val="Math.exp(2 * cell[i])")

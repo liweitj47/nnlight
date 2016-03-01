@@ -19,3 +19,4 @@ class MaxMarginLoss(MaxMarginLossBase):
         code.assignment(loss, 1, operator="+=")
         code.end()
         code.assignment(loss, "%s / samples" % loss)
+        code.end()

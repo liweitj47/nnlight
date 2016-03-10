@@ -136,6 +136,13 @@ class TheanoNetwork(Network):
             modified_layers.add(node)
         self.core.check_validity(modified_layers=modified_layers)
         self.maximum_sample_size = self.core.estimate_maximum_sample_size()
+        # update shared variables
+        for name in data_dict:
+            node = self.core.layers[name]
+            if isinstance(node, InputLayer):
+                node.set_theano_shared(data_dict[name][:self.maximum_sample_size])
+            else:
+                node.set_theano_shared(data_dict[name])
 
     def load(self, path, weights=None):
         """

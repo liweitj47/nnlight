@@ -83,7 +83,7 @@ class TheanoNetwork(Network):
                     block_beg = b * self.maximum_sample_size
                     block_end = block_beg + self.maximum_sample_size
                     for inp in self.inputs:
-                        block = inp.get_data()[block_beg, block_end]
+                        block = inp.get_data()[block_beg: block_end]
                         inp.set_theano_shared(block)
                 else:
                     block_beg = 0

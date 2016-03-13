@@ -198,17 +198,16 @@ class NNBuilder:
         item = d.get("training", None)
         if not item:
             self.error("missing training section")
-        if "loss" not in item:
-            self.error("missing loss function in training section")
-        optimizing_target = self.eval(item["loss"])
-        self.check(isinstance(optimizing_target.father, Loss),
-                   "the optimizing target should be a Loss instance")
-        self.core.set_optimizing_target(optimizing_target)
-        self.make_update(
-            item.pop("method", "sgd"),
-            item.pop("learning_rate", 0.1),
-            item
-        )
+        if "loss" in item:
+            optimizing_target = self.eval(item["loss"])
+            self.check(isinstance(optimizing_target.father, Loss),
+                       "the optimizing target should be a Loss instance")
+            self.core.set_optimizing_target(optimizing_target)
+            self.make_update(
+                item.pop("method", "sgd"),
+                item.pop("learning_rate", 0.1),
+                item
+            )
         output_infos = item.get("outputs", [])
         if not isinstance(output_infos, list):
             output_infos = [output_infos]

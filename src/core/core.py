@@ -163,7 +163,10 @@ class NNCore:
             dfs(layer)
 
     def topology_sort(self):
-        roots = [_.father for _ in [self.optimizing_target] + self.output_target]
+        roots = [_ for _ in self.output_target]
+        if self.optimizing_target:
+            roots.append(self.optimizing_target)
+        roots = [_.father for _ in roots]
         result = []
         visited = set()  # not finished!
         finished = set()  # finished!

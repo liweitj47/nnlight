@@ -48,7 +48,6 @@ class TheanoBackendBuilder(BackendBuilder):
 
     def build_theano(self):
         diagram = TheanoDiagram()
-        diagram.get(self.core.optimizing_target)
 
         i, j = theano.tensor.lscalar(), theano.tensor.lscalar()
 
@@ -64,22 +63,25 @@ class TheanoBackendBuilder(BackendBuilder):
             repl = diagram.get_shared(value, self.maximum_sample_size)
             theano_givens[given] = repl
 
-        updater = self.core.updater
-        if not hasattr(updater, "get_theano_updates"):
-            self.error("missing get_theano_updates()' method for %s instance to "
-                       "support Theano" % updater.__class__.__name__)
-        theano_updates = updater.get_theano_updates(diagram, self.core)
-
         theano_outputs = []
         for output in self.core.output_target:
             theano_outputs.append(diagram.get(output))
 
-        theano_train_func = theano.function(
-            inputs=[i, j],
-            givens=theano_givens,
-            updates=theano_updates,
-            outputs=theano_outputs
-        )
+        if self.core.optimizing_target:
+            updater = self.core.updater
+            if not hasattr(updater, "get_theano_updates"):
+                self.error("missing get_theano_updates()' method for %s instance to "
+                           "support Theano" % updater.__class__.__name__)
+            theano_updates = updater.get_theano_updates(diagram, self.core)
+            theano_train_func = theano.function(
+                inputs=[i, j],
+                givens=theano_givens,
+                updates=theano_updates,
+                outputs=theano_outputs
+            )
+        else:
+            theano_train_func = None
+
         theano_test_func = theano.function(
             inputs=[i, j],
             givens=theano_givens,

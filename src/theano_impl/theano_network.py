@@ -42,20 +42,22 @@ class TheanoNetwork(Network):
         block_num = int(math.ceil(self.total_sample_size / float(self.maximum_sample_size)))
 
         for b in range(block_num):
-            batch_num = 0
-            block_beg = b * self.maximum_sample_size
-            block_end = block_beg + self.maximum_sample_size
             if block_num > 1:
+                block_beg = b * self.maximum_sample_size
+                block_end = min(block_beg + self.maximum_sample_size, self.total_sample_size)
                 for inp in self.inputs:
-                    block = inp.get_data()[block_beg, block_end]
+                    block = inp.get_data()[block_beg: block_end]
                     inp.set_theano_shared(block)
-                    batch_num = int(math.ceil(block.shape[0] / float(batch_size)))
+            else:
+                block_beg = 0
+                block_end = self.total_sample_size
 
+            batch_num = int(math.ceil((block_end - block_beg) / float(batch_size)))
             for batch in range(batch_num):
                 batch_begin = batch * batch_size
                 batch_end = (batch+1) * batch_size
-                if batch_end > block.shape[0]:
-                    batch_end = block.shape[0]
+                if batch_end > block_end:
+                    batch_end = block_end
                 new_result = self.base_test_func(batch_begin, batch_end)
 
                 if result is None:
@@ -66,6 +68,9 @@ class TheanoNetwork(Network):
         return result
 
     def train(self, iters=None, batch_size=None, iter_reporter=None, batch_collector=None):
+        if self.base_train_func is None:
+            self.error("this network does not specify loss function")
+
         if iters is None:
             iters = 1
         if batch_size is None:

@@ -18,6 +18,8 @@ class NNValue:
     def get_shape(self)
 
     def set_shape(self, shape)
+
+    def get_dtype(self)
     '''
 
 
@@ -38,11 +40,17 @@ class NNScalarInt64(NNScalar):
     def get_element_size(self):
         return 8
 
+    def get_dtype(self):
+        return "int64"
+
 
 class NNScalarFloat32(NNScalar):
 
     def get_element_size(self):
         return 4
+
+    def get_dtype(self):
+        return "float32"
 
 
 class NNArray(NNValue):
@@ -63,9 +71,14 @@ class NNArrayInt64(NNArray):
     def get_element_size(self):
         return 8
 
+    def get_dtype(self):
+        return "int64"
+
 
 class NNArrayFloat32(NNArray):
 
     def get_element_size(self):
         return 4
 
+    def get_dtype(self):
+        return "float32"

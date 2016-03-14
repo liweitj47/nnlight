@@ -89,6 +89,8 @@ class Constructor:
     def create_value(father, shape, dtype="float32"):
         if isinstance(shape, int):
             shape = [-1 for _ in range(shape)]
+        else:
+            shape = [_ for _ in shape]  # copy to avoid latent alias problem
         NNDebug.check(isinstance(shape, list) or isinstance(shape, tuple),
                       "[Constructor] to create NNValue instance, shape for"
                       " create_value() need to be list or tuple")

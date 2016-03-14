@@ -249,7 +249,7 @@ class NNBuilder:
         constructor = Constructor.get_constructor("input")
         if not constructor:
             self.error("input layer constructor missed")
-        input_layer = constructor(name, shape, dtype, data)
+        input_layer = constructor(name, {"shape": shape, "dtype": dtype, "data": data}, self.core)
         self.core.add_input(name, input_layer)
 
     def make_weight(self, name, shape, init_method, dtype, to_learn):
@@ -258,7 +258,7 @@ class NNBuilder:
         constructor = Constructor.get_constructor("weight")
         if not constructor:
             self.error("weight layer constructor missed")
-        weight = constructor(name, shape, dtype, init_method)
+        weight = constructor(name, {"shape": shape, "dtype": dtype, "init_method": init_method}, self.core)
         self.core.add_weight(name, weight, to_learn)
 
     def make_layer(self, name, ltype, item):

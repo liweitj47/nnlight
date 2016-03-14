@@ -9,11 +9,12 @@ from theano import tensor
 
 class WeightLayer(LayerWithData):
 
-    def __init__(self, name, shape, dtype, init_method):
-        Layer.__init__(self, name, None, None)
-        self.name = name
+    def __init__(self, name, params, core):
+        Layer.__init__(self, name, params, core)
         self.data = None
-        self.init_method = init_method
+        self.init_method = params["init_method"]
+        shape = params["shape"]
+        dtype = params["dtype"]
         from utility.constructor import Constructor
         if len(shape) > 0:
             constructor = Constructor.get_default_array_constructor(dtype)

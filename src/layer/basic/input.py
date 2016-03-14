@@ -5,10 +5,11 @@ from layer.layers import Layer, LayerWithData
 
 class InputLayer(LayerWithData):
 
-    def __init__(self, name, shape, dtype, data):
-        Layer.__init__(self, name, None, None)
-        self.name = name
-        self.data = data
+    def __init__(self, name, params, core):
+        Layer.__init__(self, name, params, core)
+        dtype = params["dtype"]
+        shape = params["shape"]
+        self.data = params["data"]
         from utility.constructor import Constructor
         constructor = Constructor.get_default_array_constructor(dtype)
         if not constructor:

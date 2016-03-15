@@ -153,7 +153,7 @@ class NNCore:
 
         def dfs(cur):
             if cur not in visited_layers:
-                cur.forward_shape()
+                cur.backward_shape()
                 children = [i.father for i in cur.get_inputs()]
                 for child in children:
                     dfs(child)

@@ -35,7 +35,7 @@ class ConfigParser:
                 config = self.read_content(lines)
                 return config
         except IOError:
-            self.error("unable to open configuration file '%s" % config_path)
+            self.error("unable to open configuration file '%s'" % config_path)
             return None
 
     @staticmethod

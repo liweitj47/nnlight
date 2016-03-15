@@ -126,4 +126,5 @@ class WeightLayer(LayerWithData):
         return getattr(self, "theano_shared_data")
 
     def set_theano_shared(self, data):
-        self.error("WeightLayer does not support set_theano_shared()")
+        shared = getattr(self, "theano_shared_data")
+        shared.set_value(data)

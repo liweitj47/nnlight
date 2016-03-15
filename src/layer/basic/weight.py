@@ -44,7 +44,10 @@ class WeightLayer(LayerWithData):
         return self.get_value().get_shape()
 
     def get_data(self):
-        return self.data
+        if hasattr(self, "theano_shared_data"):
+            return getattr(self, "theano_shared_data").get_value()
+        else:
+            return self.data
 
     def set_data(self, data):
         self.data = data

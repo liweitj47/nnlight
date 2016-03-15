@@ -163,8 +163,10 @@ class NNBuilder:
             shape = self.eval(item.get("shape"))
             if shape is None:
                 self.error("missing shape field for weight '%s'" % name)
-            self.check(isinstance(shape, list) and all([isinstance(x, int) and x > 0 for x in shape]),
-                       "shape for weight '%s' should be positive integer array" % name)
+            if isinstance(shape, int):
+                shape = [-1 for _ in range(shape)]
+            self.check(isinstance(shape, list) and all([isinstance(x, int)]),
+                       "shape for weight '%s' should be an integer array" % name)
             init = item.get("init", "random")
             dtype = item.get("type", "float32")
             to_learn = item.get("update", True)

@@ -40,6 +40,7 @@ class WeightLayer(LayerWithData):
         return [self.get_value()]
 
     def get_shape(self):
+        # note: use its output value shape, which can be inferred before form real data
         return self.get_value().get_shape()
 
     def get_data(self):

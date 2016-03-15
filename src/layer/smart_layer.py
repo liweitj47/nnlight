@@ -65,7 +65,9 @@ class SmartLayer(Layer):
                         if not constructor:
                             self.error("weight layer constructor missed")
                         registry_name = self.name + "." + name
-                        weight = constructor(registry_name, initial_shape, dtype, "random")
+                        weight = constructor(registry_name,
+                                             {"shape":initial_shape, "dtype": dtype, "init_method": "random"},
+                                             core)
                         core.add_weight(registry_name, weight)
                         value = weight.get_value()
                 elif usage == "output":

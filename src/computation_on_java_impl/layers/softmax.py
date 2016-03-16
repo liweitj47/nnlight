@@ -45,7 +45,7 @@ class SequencialSoftmaxLayer(SequencialSoftmaxLayerBase):
         code.field("int", "samples", val="%s.length" % x)
         code.field("int", "length", val="%s[0].length" % x)
         code.field("int", "features", val="%s[0][0].length" % x)
-        code.field("int", "labels", val="%s[0].length" % W )
+        code.field("int", "labels", val="%s[0].length" % W)
         code.begin_for("int i=0; i<samples; i++")
         code.begin_for("int w=0; w<length; w++")
         code.field(datatype, "norm", val=0)

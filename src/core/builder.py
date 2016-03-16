@@ -165,7 +165,7 @@ class NNBuilder:
                 self.error("missing shape field for weight '%s'" % name)
             if isinstance(shape, int):
                 shape = [-1 for _ in range(shape)]
-            self.check(isinstance(shape, list) and all([isinstance(x, int)]),
+            self.check(isinstance(shape, list) and all([isinstance(x, int) for x in shape]),
                        "shape for weight '%s' should be an integer array" % name)
             init = item.get("init", "random")
             dtype = item.get("type", "float32")

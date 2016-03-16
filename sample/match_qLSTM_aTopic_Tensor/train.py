@@ -6,11 +6,11 @@ sys.path.append("../../src")
 import nnlight
 
 
-train_size = 100
+train_size = 180000
 train_prefix = "data/traindata"
-questions = numpy.load(train_prefix + ".wordvec.t")[:train_size]
+questions = numpy.load(train_prefix + ".question")[:train_size]
 questions_mask = numpy.load(train_prefix + ".mask")[:train_size]
-answers = numpy.load(train_prefix + ".topic")[:train_size]
+answers = numpy.load(train_prefix + ".answer")[:train_size]
 answers_neg = numpy.zeros(answers.shape, dtype="float32")
 
 
@@ -27,7 +27,7 @@ print
 
 
 print "[building network]"
-network = nnlight.create("match_qLSTM_aTopic_Tensor.config", data_dict)
+network = nnlight.create("train.config", data_dict)
 
 batch_size = 200
 batch_num = int(math.ceil(train_size / float(batch_size)))
@@ -41,6 +41,7 @@ print
 
 def reporter(inner_iter, result):
     margin, bad_count = result[0], result[1]
+    network.save("qLSTM_aTopic_Tensor.model")
     print "iters %s: margin %f, error_count %d" % (inner_iter + 10*iter_index, -margin/batch_num, int(bad_count))
 
 

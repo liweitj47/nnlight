@@ -11,6 +11,7 @@ from layer.basic.weight import WeightLayer
 from loss.basic.cross_entropy import CrossEntropyLoss, BinaryCrossEntropyLoss
 from loss.basic.cross_entropy import SequentialCrossEntropyLoss, SequentialBinaryCrossEntropyLoss
 from loss.basic.max_margin import MaxMarginLoss
+from layer.basic.aggregate import ConcatLayer
 from updater.updaters import SGDUpdater
 from utility.debug import NNDebug
 from value.values import NNScalarInt64, NNArrayFloat32, NNScalarFloat32
@@ -34,6 +35,9 @@ default_cm = {
         LowRankTensorLayer: ["low_rank_tensor"],
         LstmLayer: ["lstm"],
         SequencialSoftmaxLayer: ["sequencial_softmax"],
+
+        # aggregate
+        ConcatLayer: ["concatenate"],
 
         # loss
         MaxMarginLoss: ["max_margin_loss"],

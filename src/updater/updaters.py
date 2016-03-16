@@ -30,3 +30,4 @@ class SGDUpdater(Updater):
                 weight_data - self.learning_rate * grad
             ))
         return updates
+

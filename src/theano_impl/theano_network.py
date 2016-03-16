@@ -137,9 +137,13 @@ class TheanoNetwork(Network):
         modified_layers = set()
         for name in data_dict:
             node = self.core.layers[name]
+            new_data = data_dict[name]
+            old_data = node.get_data()
+            if old_data.shape != new_data.shape:
+                modified_layers.add(node)
             node.set_data(data_dict[name])
-            modified_layers.add(node)
-        self.core.check_validity(modified_layers=modified_layers)
+        if len(modified_layers) > 0:
+            self.core.check_validity(modified_layers=modified_layers)
         self.maximum_sample_size = self.core.estimate_maximum_sample_size()
         # update shared variables
         for name in data_dict:

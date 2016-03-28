@@ -30,6 +30,7 @@ class NNBuilder:
         # internal states
         self.core = NNCore()
         self.names = set()
+        self.groups = {}
         self.values = {}
 
         # backend builder
@@ -140,10 +141,31 @@ class NNBuilder:
                        "parameter '%s' should be an integer or float")
             self.values[name] = value
 
+        # group
+        for item in d.get("group", []):
+            name = item.get("name", "")
+            self.check_name(name)
+            item.pop("name")
+            group = {}
+            weight_defs = set()
+            for key in item:
+                val = item[key]
+                if isinstance(val, list) or isinstance(val, int):
+                    d.setdefault("weight", []).append({"name": key, "shape": val})
+                    weight_defs.add(key)
+                else:
+                    group[key] = val
+                    if val in weight_defs:
+                        weight_defs.remove(key)
+            for key in weight_defs:
+                group[key] = key
+            self.groups[name] = group
+
         # inputs
         for item in d.get("input", []):
             name = item.get("name", "")
             self.check_name(name)
+            self.expand_group(item)
             shape = item.get("shape")
             if shape is None:
                 self.error("missing shape field for input '%s'" % name)
@@ -156,10 +178,11 @@ class NNBuilder:
             dtype = item.get("type", "float32")
             self.make_input(name, shape, dtype, data_dict[name])
 
-        # weights
+        # weight
         for item in d.get("weight", []):
             name = item.get("name", "")
             self.check_name(name)
+            self.expand_group(item)
             shape = self.eval(item.get("shape"))
             if shape is None:
                 self.error("missing shape field for weight '%s'" % name)
@@ -176,6 +199,7 @@ class NNBuilder:
         for item in d.get("layer", []):
             name = item.pop("name", "")
             self.check_name(name)
+            self.expand_group(item)
             ltype = item.pop("type", None)
             if not ltype:
                 self.error("missing type field in layer '%s'" % name)
@@ -188,6 +212,7 @@ class NNBuilder:
         for item in d.get("loss", []):
             name = item.pop("name", "")
             self.check_name(name)
+            self.expand_group(item)
             ltype = item.pop("type", None)
             if not ltype:
                 self.error("missing type field in loss '%s'" % name)
@@ -304,6 +329,17 @@ class NNBuilder:
             self.error("invalid name %s, '.' is used for internal names" % s)
         else:
             self.names.add(s)
+
+    def expand_group(self, item):
+        gname = item.get("group")
+        if gname in self.groups:
+            group = self.groups[gname]
+            for name in group:
+                if name in item:
+                    self.error("duplicate parameter '%s' of group '%s', already"
+                               " exists in '%s'" % (name, gname, item["name"]))
+                item[name] = group[name]
+            item.pop("group")
 
     def backend_build(self):
         self.core.check_validity()

@@ -74,6 +74,7 @@ class ConfigParser:
             "param": [],
             "input": [],
             "weight": [],
+            "group": [],
             "layer": [],
             "loss": [],
             "training": None

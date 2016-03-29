@@ -1,17 +1,23 @@
 import importlib
+
+from layer.basic.aggregate import ConcatLayer
 from layer.basic.input import InputLayer
+from layer.basic.aggregate import ConcatLayer
 from layer.basic.logistic import LogisticLayer
-from layer.basic.lstm import LstmLayer
 from layer.basic.pooling import MaxPoolingWithTimeLayer
 from layer.basic.sentence_conv import SentenceConvolutionLayer
 from layer.basic.simple import SimpleLayer
-from layer.basic.softmax import SoftmaxLayer, SequencialSoftmaxLayer
+from layer.basic.softmax import SoftmaxLayer
 from layer.basic.tensor import LowRankTensorLayer
 from layer.basic.weight import WeightLayer
+from layer.sequence.lstm import LstmLayer
+from layer.sequence.gru import GruLayer
+from layer.sequence.prediction import SequentialSoftmaxLayer, SequentialLogisticLayer
+from layer.sequence.attention import AttentionGruLayer
+from layer.sequence.gen_seq import SequentialGeneratorWithContext
 from loss.basic.cross_entropy import CrossEntropyLoss, BinaryCrossEntropyLoss
 from loss.basic.cross_entropy import SequentialCrossEntropyLoss, SequentialBinaryCrossEntropyLoss
 from loss.basic.max_margin import MaxMarginLoss
-from layer.basic.aggregate import ConcatLayer
 from updater.updaters import SGDUpdater
 from utility.debug import NNDebug
 from value.values import NNScalarInt64, NNArrayFloat32, NNScalarFloat32
@@ -33,8 +39,13 @@ default_cm = {
         SoftmaxLayer: ["softmax"],
         LogisticLayer: ["logistic"],
         LowRankTensorLayer: ["low_rank_tensor"],
+
+        # sequential layer
         LstmLayer: ["lstm"],
-        SequencialSoftmaxLayer: ["sequencial_softmax"],
+        GruLayer: ["gru"],
+        AttentionGruLayer: ["attention_gru"],
+        SequentialSoftmaxLayer: ["sequential_softmax"],
+        SequentialGeneratorWithContext: ["gen_seq_with_context"],
 
         # aggregate
         ConcatLayer: ["concatenate"],
@@ -43,8 +54,8 @@ default_cm = {
         MaxMarginLoss: ["max_margin_loss"],
         BinaryCrossEntropyLoss: ["binary_cross_entropy"],
         CrossEntropyLoss: ["cross_entropy"],
-        SequentialBinaryCrossEntropyLoss: ["sequencial_binary_cross_entropy"],
-        SequentialCrossEntropyLoss: ["sequencial_cross_entropy"],
+        SequentialBinaryCrossEntropyLoss: ["sequential_binary_cross_entropy"],
+        SequentialCrossEntropyLoss: ["sequential_cross_entropy"],
 
         # parameter updater
         SGDUpdater: ["sgd"]

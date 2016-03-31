@@ -225,7 +225,8 @@ class NNBuilder:
         item = d.get("training", None)
         if not item:
             self.error("missing training section")
-        if "loss" in item:
+        trainable = "loss" in item
+        if trainable:
             optimizing_target = self.eval(item["loss"])
             self.check(isinstance(optimizing_target.father, Loss),
                        "the optimizing target should be a Loss instance")
@@ -238,6 +239,8 @@ class NNBuilder:
         output_infos = item.get("outputs", [])
         if not isinstance(output_infos, list):
             output_infos = [output_infos]
+        if len(output_infos) == 0 and not trainable:
+            self.error("at least one output should be given in 'outputs' field")
         for output_info in output_infos:
             output = self.eval(output_info)
             self.check(isinstance(output, NNValue),

@@ -19,6 +19,8 @@ class TheanoSmartLayer(SmartLayer):
         for name, info in itertools.chain(self.inputs_info.items(), self.weights_info.items()):
             var = diagram.get(info.value) if info.value else None
             setattr(agent, name, var)
+        for name in self.none_objects:
+            setattr(agent, name, None)
         for name, info in self.outputs_info.items():
             setattr(agent, name, None)
         self.get_theano_output_smart(agent)

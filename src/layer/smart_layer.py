@@ -1,6 +1,6 @@
-import itertools
 from layer.layers import Layer
 from value.values import NNValue
+from layer.dropoutable import Dropoutable
 
 
 class ValueInfo:
@@ -10,10 +10,11 @@ class ValueInfo:
         self.value = value
 
 
-class SmartLayer(Layer):
+class SmartLayer(Layer, Dropoutable):
 
     def __init__(self, name, params, core):
         Layer.__init__(self, name, params, core)
+        Dropoutable.__init__(self, params.get("dropout", 0.))
         self.name = name
         self.params = params
 
@@ -22,7 +23,7 @@ class SmartLayer(Layer):
         self.weights_info = {}
         self.outputs_info = {}
         self.all_info = {}
-        self.shape_template_dict = {}
+        self.none_objects = []
 
         #  inputs and outputs NNValue
         self.inputs = []
@@ -57,24 +58,24 @@ class SmartLayer(Layer):
                        "'%s' already defined as output in info()" % name)
             if value is None:
                 from utility.constructor import Constructor
-                if usage == "weight":
-                    if extra:
-                        pass
-                    else:
-                        constructor = Constructor.get_constructor("weight")
-                        if not constructor:
-                            self.error("weight layer constructor missed")
-                        registry_name = self.name + "." + name
-                        weight = constructor(registry_name,
-                                             {"shape": initial_shape, "dtype": dtype, "init_method": "random"},
-                                             core)
-                        core.add_weight(registry_name, weight)
-                        value = weight.get_value()
-                elif usage == "output":
+                if usage == "output":
                     value = Constructor.create_value(self, initial_shape, dtype)
+                elif extra:
+                    self.none_objects.append(name)
+                    continue
+                elif usage == "weight":
+                    constructor = Constructor.get_constructor("weight")
+                    if not constructor:
+                        self.error("weight layer constructor missed")
+                    registry_name = self.name + "." + name
+                    weight = constructor(registry_name,
+                                         {"shape": initial_shape, "dtype": dtype, "init_method": "random"},
+                                         core)
+                    core.add_weight(registry_name, weight)
+                    value = weight.get_value()
                 else:
                     self.error("missing input param '%s' defined in info() for '%s'" % (name, self.name))
-            self.check(isinstance(value, NNValue) or extra,
+            self.check(isinstance(value, NNValue),
                        "invalid input param '%s', expect a NNValue instance "
                        "defined in info() but actually receive a '%s'" % (name, value.__class__.__name__))
 
@@ -100,13 +101,6 @@ class SmartLayer(Layer):
             self.error("at least one input should be defined in info()")
         if len(self.outputs_info) < 1:
             self.error("at least one output should be defined in info()")
-
-        # add object attributes
-        for name in self.all_info:
-            if not hasattr(self, name):
-                setattr(self, name, self.all_info[name].value)
-            else:
-                self.error("name '%s' already used by SmartLayer internals" % name)
 
     def info(self):
         self.error("you must override info() method for your smart layer")
@@ -135,14 +129,12 @@ class SmartLayer(Layer):
         self.broadcast_shape("input", self.inputs_info, pool, False)
         self.broadcast_shape("weight", self.weights_info, pool, False)
         self.broadcast_shape("output", self.outputs_info, pool, override)
-        self.shape_template_dict = pool
 
     def backward_shape(self, override=False):
         pool = {}
         self.broadcast_shape("output", self.outputs_info, pool, False)
         self.broadcast_shape("weight", self.weights_info, pool, False)
         self.broadcast_shape("input", self.inputs_info, pool, False)
-        self.shape_template_dict = pool
 
     def broadcast_shape(self, usage, info_dict, pool, override=False):
         for name, info in info_dict.items():
@@ -219,13 +211,20 @@ class SmartLayer(Layer):
             return i + 1, s[i]
 
         def eval_term(term):
+            term_segments = term.split("=")
+            default = eval_term(term_segments[1]) if len(term_segments) > 1 else None
+            term = term_segments[0]
             try:
                 result = int(term)
             except ValueError:
-                if term not in pool and term not in self.params:
-                    # self.error("unknown shape element '%s' in '%s' defined in info()" % (term, s))
+                if term in pool:
+                    result = pool[term]
+                elif term in self.params:
+                    result = self.params[term]
+                elif default is not None:
+                    result = default
+                else:
                     return None
-                result = pool[term] if term in pool else self.params[term]
             self.check(isinstance(result, int),
                        "'%s' expected to be integer defined in info()" % term)
             return result

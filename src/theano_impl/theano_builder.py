@@ -9,6 +9,7 @@ from core.backend import BackendBuilder
 from theano_network import TheanoNetwork
 from utility.debug import NNDebug
 from value.values import NNValue
+from layer.dropoutable import Dropoutable
 
 
 class TheanoBackendBuilder(BackendBuilder):
@@ -29,7 +30,7 @@ class TheanoBackendBuilder(BackendBuilder):
     def build(self):
         self.check_inputs()
         self.maximum_sample_size = self.core.estimate_maximum_sample_size()
-        base_train_func, base_test_func = self.build_theano()
+        base_train_func, base_test_func = self.build_functions()
         network = TheanoNetwork(core=self.core,
                                 base_train_func=base_train_func,
                                 base_test_func=base_test_func,
@@ -46,11 +47,7 @@ class TheanoBackendBuilder(BackendBuilder):
                 self.error("inconsistent input shape for '%s', expect %s but %s actually"
                            % (inp.name, shape, data.shape))
 
-    def build_theano(self):
-        diagram = TheanoDiagram()
-
-        i, j = theano.tensor.lscalar(), theano.tensor.lscalar()
-
+    def build_givens(self, i, j, diagram):
         theano_givens = {}
         for inp in self.core.inputs.values():
             value = inp.get_value()
@@ -62,40 +59,77 @@ class TheanoBackendBuilder(BackendBuilder):
             given = diagram.get(value)
             repl = diagram.get_shared(value, self.maximum_sample_size)
             theano_givens[given] = repl
+        return theano_givens
 
+    def build_outputs(self, diagram):
         theano_outputs = []
         for output in self.core.output_target:
             theano_outputs.append(diagram.get(output))
+        return theano_outputs
 
-        if self.core.optimizing_target:
-            updater = self.core.updater
-            if not hasattr(updater, "get_theano_updates"):
-                self.error("missing get_theano_updates()' method for %s instance to "
-                           "support Theano" % updater.__class__.__name__)
-            theano_updates = updater.get_theano_updates(diagram, self.core)
-            theano_train_func = theano.function(
-                inputs=[i, j],
-                givens=theano_givens,
-                updates=theano_updates,
-                outputs=theano_outputs
-            )
-        else:
-            theano_train_func = None
-
-        theano_test_func = theano.function(
+    def build_train_func(self, i, j):
+        diagram = TheanoDiagram(dropout=True)
+        givens = self.build_givens(i, j, diagram)
+        outputs = self.build_outputs(diagram)
+        updater = self.core.updater
+        if not hasattr(updater, "get_theano_updates"):
+            self.error("missing get_theano_updates()' method for %s instance to "
+                       "support Theano" % updater.__class__.__name__)
+        updates = updater.get_theano_updates(diagram, self.core)
+        train_func = theano.function(
             inputs=[i, j],
-            givens=theano_givens,
-            outputs=theano_outputs,
+            givens=givens,
+            updates=updates,
+            outputs=outputs
+        )
+        return train_func, (diagram, givens, outputs)
+
+    def build_test_func(self, i, j, cur):
+        if cur is None:
+            diagram = TheanoDiagram()
+            givens = self.build_givens(i, j, diagram)
+            outputs = self.build_outputs(diagram)
+        else:
+            givens, outputs = cur
+        return theano.function(
+            inputs=[i, j],
+            givens=givens,
+            outputs=outputs,
             on_unused_input='ignore'  # some inputs is unnecessary since loss may not be computed
         )
-        return theano_train_func, theano_test_func
+
+    def should_build_separately(self):
+        for layer in self.core.layers.values():
+            if isinstance(layer, Dropoutable) and layer.dropout_rate() > 0:
+                return True
+        return False
+
+    def build_functions(self):
+        i, j = tensor.lscalar(), tensor.lscalar()
+        train_func, byproducts = self.build_train_func(i, j)
+        if self.should_build_separately():
+            byproducts = None
+        test_func = self.build_test_func(i, j, byproducts)
+        return train_func, test_func
 
 
 class TheanoDiagram:
 
-    def __init__(self):
+    def __init__(self, dropout=False):
         self.mapping = {}
         self.shared_mapping = {}
+        self.dropout = dropout
+
+    def wrap(self, v):
+        layer = v.get_father()
+        if self.dropout and isinstance(layer, Dropoutable) and layer.can_dropout(v):
+            numpy_rng = numpy.random.RandomState(233)
+            from theano.tensor.shared_randomstreams import RandomStreams
+            theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
+            v = v * theano_rng.binomial(size=v.get_shape(),
+                                        n=1, p=1-layer.dropout_rate(),
+                                        dtype=theano.config.floatX)
+        return v
 
     def get(self, value):
         if not isinstance(value, NNValue):
@@ -119,9 +153,9 @@ class TheanoDiagram:
                                   "[builder] incomplete outputs for implementation of"
                                   " %s.get_theano_output()" % value.get_father().__class__.__name__)
                     for v in output:
-                        self.mapping[v] = output[v]
+                        self.mapping[v] = self.wrap(output[v])
                 else:
-                    self.mapping[value] = output
+                    self.mapping[value] = self.wrap(output)
                 result = self.mapping[value]
                 NNDebug.check(isinstance(result, object),
                               "[builder] invalid outputs for implementation of"

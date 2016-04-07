@@ -90,7 +90,7 @@ class TheanoBackendBuilder(BackendBuilder):
             givens = self.build_givens(i, j, diagram)
             outputs = self.build_outputs(diagram)
         else:
-            givens, outputs = cur
+            diagram, givens, outputs = cur
         return theano.function(
             inputs=[i, j],
             givens=givens,
@@ -131,7 +131,7 @@ class TheanoDiagram:
 
         for v in output:
             o = output[v]
-            if self.dropout and isinstance(layer, Dropoutable) and layer.can_dropout(v):
+            if False and self.dropout and isinstance(layer, Dropoutable) and layer.can_dropout(v):
                 numpy_rng = numpy.random.RandomState(233)
                 from theano.tensor.shared_randomstreams import RandomStreams
                 theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))

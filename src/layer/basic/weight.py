@@ -1,8 +1,7 @@
 import random
-
 import numpy
 import theano
-
+from utility.typecheck import TypeChecker
 from layer.layers import Layer, LayerWithData
 from theano import tensor
 
@@ -53,7 +52,10 @@ class WeightLayer(LayerWithData):
         self.data = data
 
     def check_input_type(self):
-        pass
+        if self.data is not None:
+            self.check(TypeChecker.consistent(self.data.dtype, self.output.get_dtype()),
+                       "inconsistent datatype of weight '%s', '%s' expected "
+                       "but actually '%s'" % (self.name, self.output.get_dtype(), self.data.dtype))
 
     def forward_shape(self, override=False):
         if self.data is None:
@@ -113,7 +115,7 @@ class WeightLayer(LayerWithData):
 
                 def __randomize__(w, dims):
                     if len(dims) == 0:
-                        w = numpy.asarray(random.uniform(low, high), dtype="float32")
+                        w += numpy.asarray(random.uniform(low, high), dtype="float32")
                     elif len(dims) == 1:
                         for i in range(dims[0]):
                             w[i] = random.uniform(low, high)

@@ -120,16 +120,25 @@ class TheanoDiagram:
         self.shared_mapping = {}
         self.dropout = dropout
 
-    def wrap(self, v):
-        layer = v.get_father()
-        if self.dropout and isinstance(layer, Dropoutable) and layer.can_dropout(v):
-            numpy_rng = numpy.random.RandomState(233)
-            from theano.tensor.shared_randomstreams import RandomStreams
-            theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
-            v = v * theano_rng.binomial(size=v.get_shape(),
+    def wrap(self, layer, value):
+        output = layer.get_theano_output(self)
+        if not isinstance(output, dict):
+            output = {value: output}
+        else:
+            NNDebug.check(value in output,
+                          "[builder] incomplete outputs for implementation of"
+                          " %s.get_theano_output()" % value.get_father().__class__.__name__)
+
+        for v in output:
+            o = output[v]
+            if self.dropout and isinstance(layer, Dropoutable) and layer.can_dropout(v):
+                numpy_rng = numpy.random.RandomState(233)
+                from theano.tensor.shared_randomstreams import RandomStreams
+                theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
+                o = o * theano_rng.binomial(size=v.get_shape(),
                                         n=1, p=1-layer.dropout_rate(),
                                         dtype=theano.config.floatX)
-        return v
+            self.mapping[v] = o
 
     def get(self, value):
         if not isinstance(value, NNValue):
@@ -147,15 +156,7 @@ class TheanoDiagram:
             else:
                 # for single output, an theano variable is returned
                 # for multiple outputs, a NNValue->theano variable dictionary is returned
-                output = layer.get_theano_output(self)
-                if isinstance(output, dict):
-                    NNDebug.check(value in output,
-                                  "[builder] incomplete outputs for implementation of"
-                                  " %s.get_theano_output()" % value.get_father().__class__.__name__)
-                    for v in output:
-                        self.mapping[v] = self.wrap(output[v])
-                else:
-                    self.mapping[value] = self.wrap(output)
+                self.wrap(layer, value)
                 result = self.mapping[value]
                 NNDebug.check(isinstance(result, object),
                               "[builder] invalid outputs for implementation of"

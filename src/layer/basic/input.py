@@ -1,12 +1,15 @@
 import theano
 from theano import tensor
+from utility.typecheck import TypeChecker
 from layer.layers import Layer, LayerWithData
+from layer.dropoutable import Dropoutable
 
 
-class InputLayer(LayerWithData):
+class InputLayer(LayerWithData, Dropoutable):
 
     def __init__(self, name, params, core):
         Layer.__init__(self, name, params, core)
+        Dropoutable.__init__(self, params.get("dropout", 0.))
         dtype = params["dtype"]
         shape = params["shape"]
         self.data = params["data"]
@@ -38,7 +41,10 @@ class InputLayer(LayerWithData):
         self.data = data
 
     def check_input_type(self):
-        pass
+        if self.data is not None:
+            self.check(TypeChecker.consistent(self.data.dtype, self.output.get_dtype()),
+                       "inconsistent datatype of input '%s', '%s' expected "
+                       "but actually '%s'" % (self.name, self.output.get_dtype(), self.data.dtype))
 
     def forward_shape(self, override=False):
         shape0 = [int(x) for x in self.data.shape]  # ensure integers be int type

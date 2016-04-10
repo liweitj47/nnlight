@@ -40,6 +40,7 @@ class AggregateLayer(Layer):
 
     def forward_shape(self, override=False):
         input_shapes = [_.get_shape() for _ in self.get_inputs()]
+        output_shape = self.get_outputs()[0].get_shape()
         template_shape = [-1 for _ in input_shapes[0]]
         for i, shape in enumerate(input_shapes):
             if len(shape) != len(template_shape):
@@ -52,13 +53,16 @@ class AggregateLayer(Layer):
                 if val <= 0:
                     if template_shape[j] > 0:
                         input_shapes[j] = val
+                        output_shape[j] = val
                 else:
-                    if template_shape[i] <= 0:
-                        template_shape[i] = val
+                    output_shape[j] = val
+                    if template_shape[j] <= 0:
+                        template_shape[j] = val
                     elif val != template_shape[j]:
                         self.error("inconsistent shape value for '%s''s %dth input,"
-                                   "%dth element expected to %d, but actually %d"
+                                   "%dth element expected to be %d, but actually %d"
                                    % (self.name, i, j, template_shape[j], val))
+        self.get_outputs()[0].set_shape(output_shape)
         for i, inp in enumerate(self.get_inputs()):
             inp.set_shape(input_shapes[i])
 

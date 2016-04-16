@@ -75,7 +75,7 @@ class TheanoBackendBuilder(BackendBuilder):
         if not hasattr(updater, "get_theano_updates"):
             self.error("missing get_theano_updates()' method for %s instance to "
                        "support Theano" % updater.__class__.__name__)
-        updates = updater.get_theano_updates(diagram, self.core)
+        updates = updater.get_theano_updates(diagram, self.core, i, j)
         train_func = theano.function(
             inputs=[i, j],
             givens=givens,

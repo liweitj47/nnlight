@@ -231,11 +231,7 @@ class NNBuilder:
             self.check(isinstance(optimizing_target.father, Loss),
                        "the optimizing target should be a Loss instance")
             self.core.set_optimizing_target(optimizing_target)
-            self.make_update(
-                item.pop("method", "sgd"),
-                item.pop("learning_rate", 0.1),
-                item
-            )
+            self.make_update(item)
         output_infos = item.get("outputs", [])
         if not isinstance(output_infos, list):
             output_infos = [output_infos]
@@ -313,10 +309,17 @@ class NNBuilder:
                    "loss '%s: %s' should be Loss instance" % (name, ltype))
         self.core.add_loss(name, loss)
 
-    def make_update(self, method, learning_rate, item):
+    def make_update(self, item):
+        method = item.pop("method", "sgd")
         constructor = Constructor.get_constructor(method)
         if not constructor:
-            self.error("unknown update type '%s'" % method)
+            classpath = item.pop("classpath", None)
+            if classpath:
+                Constructor.register_type(method, classpath)
+                constructor = Constructor.get_constructor(method)
+            else:
+                self.error("unknown update type '%s'" % method)
+        learning_rate = item.pop("learning_rate", 0.1),
         updater = constructor(learning_rate, item, self.core)
         self.check(isinstance(updater, Updater), "'%s' update should be Updater instance" % method)
         self.core.set_updater(updater)

@@ -17,7 +17,7 @@ class SGDUpdater(Updater):
         Updater.__init__(self, learning_rate, params, core)
         self.learning_rate = learning_rate
 
-    def get_theano_updates(self, diagram, core):
+    def get_theano_updates(self, diagram, core, i, j):
         loss = diagram.get(core.optimizing_target)
         updates = []
         for weight in core.to_learn.values():

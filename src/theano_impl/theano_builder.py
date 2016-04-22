@@ -106,11 +106,15 @@ class TheanoBackendBuilder(BackendBuilder):
 
     def build_functions(self):
         i, j = tensor.lscalar(), tensor.lscalar()
-        train_func, byproducts = self.build_train_func(i, j)
-        if self.should_build_separately():
-            byproducts = None
-        test_func = self.build_test_func(i, j, byproducts)
-        return train_func, test_func
+        if self.core.optimizing_target is None:
+            test_func = self.build_test_func(i, j, None)
+            return None, test_func
+        else:
+            train_func, byproducts = self.build_train_func(i, j)
+            if self.should_build_separately():
+                byproducts = None
+            test_func = self.build_test_func(i, j, byproducts)
+            return train_func, test_func
 
 
 class TheanoDiagram:

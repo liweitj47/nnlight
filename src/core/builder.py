@@ -319,7 +319,7 @@ class NNBuilder:
                 constructor = Constructor.get_constructor(method)
             else:
                 self.error("unknown update type '%s'" % method)
-        learning_rate = item.pop("learning_rate", 0.1),
+        learning_rate = item.pop("learning_rate", float(0.1)),
         updater = constructor(learning_rate, item, self.core)
         self.check(isinstance(updater, Updater), "'%s' update should be Updater instance" % method)
         self.core.set_updater(updater)

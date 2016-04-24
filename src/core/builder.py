@@ -200,26 +200,14 @@ class NNBuilder:
             name = item.pop("name", "")
             self.check_name(name)
             self.expand_group(item)
-            ltype = item.pop("type", None)
-            if not ltype:
-                self.error("missing type field in layer '%s'" % name)
-            classpath = item.pop("classpath", None)
-            if classpath:
-                Constructor.register_type(ltype, classpath)
-            self.make_layer(name, ltype, item)
+            self.make_layer(name, item)
 
         # losses
         for item in d.get("loss", []):
             name = item.pop("name", "")
             self.check_name(name)
             self.expand_group(item)
-            ltype = item.pop("type", None)
-            if not ltype:
-                self.error("missing type field in loss '%s'" % name)
-            classpath = item.pop("classpath", None)
-            if classpath:
-                Constructor.register_type(ltype, classpath)
-            self.make_loss(name, ltype, item)
+            self.make_loss(name, item)
 
         # training
         item = d.get("training", None)
@@ -287,22 +275,34 @@ class NNBuilder:
         weight = constructor(name, {"shape": shape, "dtype": dtype, "init_method": init_method}, self.core)
         self.core.add_weight(name, weight, to_learn)
 
-    def make_layer(self, name, ltype, item):
-        constructor = Constructor.get_constructor(ltype)
+    def get_constructor(self, typ, classpath, source):
+        if classpath:
+            constructor = Constructor.load_constructor_from_path(classpath)
+            if typ:
+                Constructor.register_type(typ, classpath, constructor)
+        elif typ:
+            constructor = Constructor.get_constructor(typ)
+        else:
+            constructor = None
+            self.error("missing type field for %s" % source)
         if not constructor:
-            self.error("unknown layer type '%s' for layer '%s'" % (ltype, name))
+            self.error("unknown type '%s' for %s" % (typ, source))
+        return constructor
 
+    def make_layer(self, name, item):
+        classpath = item.pop("classpath", None)
+        ltype = item.pop("type", None)
+        constructor = self.get_constructor(ltype, classpath, "layer '%s'" % name)
         params = dict([(k, self.eval(item[k])) for k in item])
         layer = constructor(name, params, self.core)
         self.check(isinstance(layer, Layer),
                    "layer '%s: %s' should be Layer instance" % (name, ltype))
         self.core.add_layer(name, layer)
 
-    def make_loss(self, name, ltype, item):
-        constructor = Constructor.get_constructor(ltype)
-        if not constructor:
-            self.error("unknown loss type '%s' for loss '%s'" % (ltype, name))
-
+    def make_loss(self, name, item):
+        ltype = item.pop("type", None)
+        classpath = item.pop("classpath", None)
+        constructor = self.get_constructor(ltype, classpath, "loss '%s'" % name)
         params = dict([(k, self.eval(item[k])) for k in item])
         loss = constructor(name, params, self.core)
         self.check(isinstance(loss, Loss),
@@ -311,14 +311,8 @@ class NNBuilder:
 
     def make_update(self, item):
         method = item.pop("method", "sgd")
-        constructor = Constructor.get_constructor(method)
-        if not constructor:
-            classpath = item.pop("classpath", None)
-            if classpath:
-                Constructor.register_type(method, classpath)
-                constructor = Constructor.get_constructor(method)
-            else:
-                self.error("unknown update type '%s'" % method)
+        classpath = item.pop("classpath", None)
+        constructor = self.get_constructor(method, classpath, "parameter updater")
         learning_rate = item.pop("learning_rate", float(0.1)),
         updater = constructor(learning_rate, item, self.core)
         self.check(isinstance(updater, Updater), "'%s' update should be Updater instance" % method)

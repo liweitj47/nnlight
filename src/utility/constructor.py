@@ -141,11 +141,14 @@ class Constructor:
         return classobj
 
     @staticmethod
-    def register_type(name, classpath):
+    def register_type(name, classpath, constructor=None):
         if name in constructor_map:
-            NNDebug.error("[Constructor] typename '%s' already defined" % name)
-        classobj = Constructor.load_constructor_from_path(classpath)
-        constructor_map[name] = classobj
+                NNDebug.error("[Constructor] typename '%s' already defined" % name)
+        if constructor:
+            constructor_map[name] = constructor
+        else:
+            classobj = Constructor.load_constructor_from_path(classpath)
+            constructor_map[name] = classobj
 
 
 Constructor.load_default_constructor_map(default_cm)

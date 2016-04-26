@@ -72,7 +72,7 @@ class DimShuffle(Layer):
                                    "%dth element expected to be %d, but actually %d"
                                    % (self.name, i, d_o, d_i))
                     elif d_i <= 0:
-                        input_shape[i] = d_o
+                        input_shape[src] = d_o
         self.input.set_shape(input_shape)
 
     def get_theano_output(self, diagram):

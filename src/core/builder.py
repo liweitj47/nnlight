@@ -183,6 +183,7 @@ class NNBuilder:
             name = item.get("name", "")
             self.check_name(name)
             self.expand_group(item)
+            data = data_dict.get(name)
             shape = self.eval(item.get("shape"))
             if shape is None:
                 self.error("missing shape field for weight '%s'" % name)
@@ -190,10 +191,16 @@ class NNBuilder:
                 shape = [-1 for _ in range(shape)]
             self.check(isinstance(shape, list) and all([isinstance(x, int) for x in shape]),
                        "shape for weight '%s' should be an integer array" % name)
+            if data is not None:
+                self.check(len(shape) == len(data.shape) and
+                           all([s <= 0 or s == t for (s, t) in zip(shape, data.shape)]),
+                           "inconsistent shape for weight '%s', %s expected but"
+                           " actually %s" % (name, shape, data.shape))
+                shape = [_ for _ in data.shape]
             init = item.get("init", "random")
             dtype = item.get("type", "float32")
             to_learn = item.get("update", True)
-            self.make_weight(name, shape, init, dtype, to_learn)
+            self.make_weight(name, shape, init, dtype, to_learn, data)
 
         # layers
         for item in d.get("layer", []):
@@ -266,13 +273,18 @@ class NNBuilder:
         input_layer = constructor(name, {"shape": shape, "dtype": dtype, "data": data}, self.core)
         self.core.add_input(name, input_layer)
 
-    def make_weight(self, name, shape, init_method, dtype, to_learn):
+    def make_weight(self, name, shape, init_method, dtype, to_learn, data=None):
         if dtype not in self.valid_weight_dtypes:
             self.error("invalid datatype '%s' for weight '%s'" % (dtype, name))
         constructor = Constructor.get_constructor("weight")
         if not constructor:
             self.error("weight layer constructor missed")
-        weight = constructor(name, {"shape": shape, "dtype": dtype, "init_method": init_method}, self.core)
+        weight = constructor(name,
+                             {"shape": shape,
+                              "dtype": dtype,
+                              "init_method": init_method,
+                              "data": data},
+                             self.core)
         self.core.add_weight(name, weight, to_learn)
 
     def get_constructor(self, typ, classpath, source):

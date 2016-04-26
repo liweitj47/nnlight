@@ -10,7 +10,7 @@ class WeightLayer(LayerWithData):
 
     def __init__(self, name, params, core):
         Layer.__init__(self, name, params, core)
-        self.data = None
+        self.data = params.get("data")
         self.init_method = params["init_method"]
         shape = params["shape"]
         dtype = params["dtype"]

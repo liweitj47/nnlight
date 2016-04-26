@@ -52,16 +52,21 @@ class AggregateLayer(Layer):
                     continue
                 if val <= 0:
                     if template_shape[j] > 0:
-                        input_shapes[j] = val
-                        output_shape[j] = val
+                        input_shapes[j] = template_shape[j]
                 else:
-                    output_shape[j] = val
                     if template_shape[j] <= 0:
                         template_shape[j] = val
                     elif val != template_shape[j]:
                         self.error("inconsistent shape value for '%s''s %dth input,"
                                    "%dth element expected to be %d, but actually %d"
                                    % (self.name, i, j, template_shape[j], val))
+                if output_shape[j] <= 0 or override:
+                    output_shape[j] = template_shape[j]
+                else:
+                    self.check(output_shape[j] == template_shape[j],
+                               "inconsistent shape value for '%s''s output, "
+                               "%dth element expected to be %d, but actually %d"
+                               % (self.name, j, template_shape[j], output_shape[j]))
         self.get_outputs()[0].set_shape(output_shape)
         for i, inp in enumerate(self.get_inputs()):
             inp.set_shape(input_shapes[i])

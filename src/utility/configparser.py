@@ -137,13 +137,13 @@ class ConfigParser:
         # string parameter "..."
         elif v.startswith('"'):
             if v.endswith('"'):
-                return v[1:-1]
+                return v
             else:
                 self.error(error_msg)
         # string parameter '...'
         elif v.startswith("'"):
             if v.endswith("'"):
-                return v[1:-1]
+                return v
             else:
                 self.error(error_msg)
         # arithmetic format

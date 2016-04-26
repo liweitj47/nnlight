@@ -233,7 +233,7 @@ class NNBuilder:
 
     def eval(self, v):
         if isinstance(v, str):
-            if v.startswith('"') and v.endswith('"'):
+            if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
                 return v[1:-1]
             elif v in self.values:
                 return self.values[v]

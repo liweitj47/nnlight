@@ -1,8 +1,7 @@
 import importlib
-
-from layer.basic.aggregate import ConcatLayer
 from layer.basic.input import InputLayer
 from layer.basic.aggregate import ConcatLayer
+from layer.basic.transform import DimShuffle
 from layer.basic.logistic import LogisticLayer
 from layer.basic.pooling import MaxPoolingWithTimeLayer
 from layer.basic.sentence_conv import SentenceConvolutionLayer
@@ -44,11 +43,13 @@ default_cm = {
         LstmLayer: ["lstm"],
         GruLayer: ["gru"],
         AttentionGruLayer: ["attention_gru"],
+        SequentialLogisticLayer: ["sequential_logistic"],
         SequentialSoftmaxLayer: ["sequential_softmax"],
         SequentialGeneratorWithContext: ["gen_seq_with_context"],
 
-        # aggregate
+        # utility layer
         ConcatLayer: ["concatenate"],
+        DimShuffle: ["dimshuffle"],
 
         # loss
         MaxMarginLoss: ["max_margin_loss"],

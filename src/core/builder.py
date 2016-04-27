@@ -330,7 +330,7 @@ class NNBuilder:
         method = item.pop("method", "sgd")
         classpath = item.pop("classpath", None)
         constructor = self.get_constructor(method, classpath, "parameter updater")
-        learning_rate = item.pop("learning_rate", float(0.1)),
+        learning_rate = item.pop("learning_rate", 0.1)
         updater = constructor(learning_rate, item, self.core)
         self.check(isinstance(updater, Updater), "'%s' update should be Updater instance" % method)
         self.core.set_updater(updater)

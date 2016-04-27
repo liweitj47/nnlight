@@ -240,7 +240,12 @@ class NNBuilder:
 
     def eval(self, v):
         if isinstance(v, str):
-            if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+            if v.find("+") > 0:
+                args = [self.eval(x) for x in v.split("+")]
+                self.check(all([isinstance(x, int) for x in args]),
+                           "add expression require all arguments to be integer: %s" % v)
+                return sum(args)
+            elif (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
                 return v[1:-1]
             elif v in self.values:
                 return self.values[v]

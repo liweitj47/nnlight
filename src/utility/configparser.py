@@ -148,15 +148,12 @@ class ConfigParser:
                 self.error(error_msg)
         # arithmetic format
         else:
-            if v.find("+") > 0:
-                v = sum([self.eval(_, linenu) for _ in v.split("+")])
-            else:
+            try:
+                v = string.atoi(v)
+            except ValueError:
                 try:
-                    v = string.atoi(v)
+                    v = string.atof(v)
                 except ValueError:
-                    try:
-                        v = string.atof(v)
-                    except ValueError:
-                        self.error(error_msg)
-                finally:
-                    return v
+                    self.error(error_msg)
+            finally:
+                return v

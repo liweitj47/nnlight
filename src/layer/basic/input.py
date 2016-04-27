@@ -50,7 +50,7 @@ class InputLayer(LayerWithData, Dropoutable):
         shape0 = [int(x) for x in self.data.shape]  # ensure integers be int type
         shape1 = self.get_value().get_shape()
         if len(shape0) != len(shape1):
-            self.error("inconsistent input data dimension for '%s',%d expected "
+            self.error("inconsistent input data dimension for '%s', %d expected "
                        "but actually %d" % (self.name, len(shape1), len(shape0)))
         for i in range(len(shape0)):
             if shape0[i] == shape1[i]:

@@ -241,7 +241,7 @@ class NNBuilder:
     def eval(self, v):
         if isinstance(v, str):
             if v.find("+") > 0:
-                args = [self.eval(x) for x in v.split("+")]
+                args = [self.eval(x.strip()) for x in v.split("+")]
                 self.check(all([isinstance(x, int) for x in args]),
                            "add expression require all arguments to be integer: %s" % v)
                 return sum(args)

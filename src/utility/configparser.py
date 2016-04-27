@@ -152,7 +152,7 @@ class ConfigParser:
                 v = string.atoi(v)
             except ValueError:
                 try:
-                    v = string.atof(v)
+                    v = float(string.atof(v))
                 except ValueError:
                     self.error(error_msg)
             finally:

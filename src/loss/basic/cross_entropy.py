@@ -38,7 +38,8 @@ class SequentialBinaryCrossEntropyLoss(Loss, TheanoSmartLayer):
 
     def get_theano_output_smart(self, n):
         n.loss = -theano.tensor.mean(
-            theano.tensor.xlogx.xlogy0(n.golden, n.predict)
+            theano.tensor.xlogx.xlogy0(n.golden, n.predict) + 
+            theano.tensor.xlogx.xlogy0(1-n.golden, 1-n.predict)
         )
 
 

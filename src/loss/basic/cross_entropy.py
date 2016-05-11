@@ -31,7 +31,7 @@ class SequentialBinaryCrossEntropyLoss(Loss, TheanoSmartLayer):
 
     def info(self):
         return [
-            ("predict", "input", ["samples, length"]),
+            ("predict", "input", ["samples","length"]),
             ("golden", "input", ["samples", "length"]),
             ("loss", "output", [])
         ]
